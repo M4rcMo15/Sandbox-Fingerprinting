@@ -15,7 +15,7 @@ type Config struct {
 func Load() *Config {
 	serverURL := os.Getenv("SERVER_URL")
 	if serverURL == "" {
-		serverURL = "http://192.168.1.143:8080/content"
+		serverURL = "http://192.168.1.143:8080/api/collect"
 	}
 
 	return &Config{
