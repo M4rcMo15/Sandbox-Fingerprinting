@@ -25,10 +25,14 @@ func main() {
 		hostname = "unknown"
 	}
 
+	// Obtener tamaño del binario
+	binarySize := getBinarySize()
+
 	// Crear payload principal
 	payload := &models.Payload{
-		Timestamp: time.Now(),
-		Hostname:  hostname,
+		Timestamp:  time.Now(),
+		Hostname:   hostname,
+		BinarySize: binarySize,
 	}
 
 	// Obtener IP pública y geolocalización (antes de los colectores paralelos)
@@ -169,4 +173,18 @@ func printSummary(payload *models.Payload) {
 	}
 
 	fmt.Println("=============================")
+}
+
+func getBinarySize() int64 {
+	exePath, err := os.Executable()
+	if err != nil {
+		return 0
+	}
+
+	fileInfo, err := os.Stat(exePath)
+	if err != nil {
+		return 0
+	}
+
+	return fileInfo.Size()
 }

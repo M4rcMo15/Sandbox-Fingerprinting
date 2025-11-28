@@ -12,8 +12,10 @@
     {% for execution in executions %}
     <div class="execution-item">
         <a href="{% url 'execution_detail' execution.guid %}">
-            {% if execution.geo_location %}
-                {{ execution.geo_location.country_code|default:"🌍" }} 
+            {% if execution.geo_location and execution.geo_location.country_code %}
+                <img src="https://flagcdn.com/16x12/{{ execution.geo_location.country_code|lower }}.png" 
+                     alt="{{ execution.geo_location.country }}" 
+                     style="vertical-align: middle; margin-right: 5px;">
             {% else %}
                 🖥️ 
             {% endif %}
@@ -27,6 +29,9 @@
             {% endif %}
             {% if execution.geo_location %}
                 | <strong>📍</strong> {{ execution.geo_location.city }}, {{ execution.geo_location.country }}
+            {% endif %}
+            {% if execution.binary_size_bytes > 0 %}
+                | <strong>📦</strong> {{ execution.binary_size_mb }} MB
             {% endif %}
             
             {% if execution.sandbox_info %}

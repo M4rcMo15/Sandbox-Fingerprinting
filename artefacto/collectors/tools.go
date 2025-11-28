@@ -105,15 +105,22 @@ func DetectTools() *models.ToolsInfo {
 		}
 	}
 
-	// Buscar en directorios comunes
+	// Buscar solo en directorios específicos (más rápido)
 	searchPaths := []string{
-		"C:\\Program Files",
-		"C:\\Program Files (x86)",
 		os.Getenv("USERPROFILE") + "\\Desktop",
 		os.Getenv("USERPROFILE") + "\\Downloads",
 	}
 
+	// Solo buscar en Program Files si no encontramos nada en procesos
+	if len(info.ReversingTools) == 0 && len(info.DebuggingTools) == 0 {
+		searchPaths = append(searchPaths, "C:\\Program Files")
+		searchPaths = append(searchPaths, "C:\\Program Files (x86)")
+	}
+
 	for _, basePath := range searchPaths {
+		if _, err := os.Stat(basePath); os.IsNotExist(err) {
+			continue
+		}
 		checkToolsInPath(basePath, reversingTools, &info.ReversingTools)
 		checkToolsInPath(basePath, debuggingTools, &info.DebuggingTools)
 		checkToolsInPath(basePath, monitoringTools, &info.MonitoringTools)
@@ -132,14 +139,40 @@ func DetectTools() *models.ToolsInfo {
 }
 
 func checkToolsInPath(basePath string, tools map[string]string, found *[]string) {
+	// Limitar profundidad y cantidad de archivos
+	maxDepth := 3
+	filesChecked := 0
+	maxFiles := 500
+	
 	filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil
+			return filepath.SkipDir
 		}
+		
+		// Limitar profundidad
+		depth := strings.Count(strings.TrimPrefix(path, basePath), string(os.PathSeparator))
+		if depth > maxDepth {
+			return filepath.SkipDir
+		}
+		
+		// Limitar cantidad de archivos
+		if filesChecked > maxFiles {
+			return filepath.SkipDir
+		}
+		
 		if info.IsDir() {
+			// Saltar directorios comunes que no contienen herramientas
+			dirName := strings.ToLower(info.Name())
+			skipDirs := []string{"windows", "system32", "winsxs", "drivers", "cache", "temp"}
+			for _, skip := range skipDirs {
+				if dirName == skip {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}
 		
+		filesChecked++
 		fileNameLower := strings.ToLower(info.Name())
 		if tool, exists := tools[fileNameLower]; exists {
 			*found = append(*found, tool)

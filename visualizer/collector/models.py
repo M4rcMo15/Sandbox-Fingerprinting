@@ -8,6 +8,7 @@ class AgentExecution(models.Model):
     timestamp = models.DateTimeField()
     hostname = models.CharField(max_length=255)
     public_ip = models.CharField(max_length=50, blank=True)
+    binary_size_bytes = models.BigIntegerField(default=0)
     received_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -15,6 +16,9 @@ class AgentExecution(models.Model):
     
     def __str__(self):
         return f"{self.hostname} - {self.timestamp}"
+    
+    def binary_size_mb(self):
+        return round(self.binary_size_bytes / (1024 * 1024), 2)
 
 
 class SandboxInfo(models.Model):

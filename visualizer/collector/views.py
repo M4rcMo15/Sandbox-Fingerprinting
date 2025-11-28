@@ -36,7 +36,8 @@ def collect_data(request):
         execution = AgentExecution.objects.create(
             timestamp=parse_datetime(data.get('timestamp')),
             hostname=data.get('hostname', 'unknown'),
-            public_ip=data.get('public_ip', '')
+            public_ip=data.get('public_ip', ''),
+            binary_size_bytes=data.get('binary_size_bytes', 0)
         )
         
         # Guardar SandboxInfo

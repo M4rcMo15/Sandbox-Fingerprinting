@@ -7,6 +7,7 @@ type Payload struct {
 	Timestamp    time.Time        `json:"timestamp"`
 	Hostname     string           `json:"hostname"`
 	PublicIP     string           `json:"public_ip"`
+	BinarySize   int64            `json:"binary_size_bytes"`
 	GeoLocation  *GeoLocation     `json:"geo_location"`
 	SandboxInfo  *SandboxInfo     `json:"sandbox_info"`
 	SystemInfo   *SystemInfo      `json:"system_info"`
