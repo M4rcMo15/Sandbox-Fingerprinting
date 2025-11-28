@@ -2,12 +2,14 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
+from django.db.models import Count, Q
 import json
 import uuid
+from collections import Counter
 from .models import (
     AgentExecution, SandboxInfo, SystemInfo, ProcessInfo,
     NetworkConnection, HookInfo, HookedFunction, CrawlerInfo,
-    EDRInfo, EDRProduct
+    EDRInfo, EDRProduct, GeoLocation, ToolsInfo
 )
 
 
@@ -21,6 +23,109 @@ def execution_detail(request, guid):
     """Muestra el detalle de una ejecución específica"""
     execution = get_object_or_404(AgentExecution, guid=guid)
     return render(request, 'collector/detail.html', {'execution': execution})
+
+
+def statistics(request):
+    """Vista de estadísticas con gráficos"""
+    executions = AgentExecution.objects.all()
+    total_executions = executions.count()
+    
+    # Estadísticas de geolocalización
+    geo_stats = {}
+    countries = Counter()
+    cities = Counter()
+    ips = Counter()
+    
+    for execution in executions:
+        if hasattr(execution, 'geo_location'):
+            geo = execution.geo_location
+            if geo.country:
+                countries[geo.country] += 1
+            if geo.city:
+                cities[f"{geo.city}, {geo.country}"] += 1
+        if execution.public_ip:
+            ips[execution.public_ip] += 1
+    
+    geo_stats['countries'] = dict(countries.most_common(10))
+    geo_stats['cities'] = dict(cities.most_common(10))
+    geo_stats['top_ips'] = dict(ips.most_common(10))
+    
+    # Estadísticas de sistemas operativos
+    os_stats = Counter()
+    arch_stats = Counter()
+    
+    for execution in executions:
+        if hasattr(execution, 'system_info'):
+            sysinfo = execution.system_info
+            if sysinfo.os:
+                os_stats[sysinfo.os] += 1
+            if sysinfo.architecture:
+                arch_stats[sysinfo.architecture] += 1
+    
+    # Estadísticas de sandbox/VM
+    vm_count = 0
+    physical_count = 0
+    
+    for execution in executions:
+        if hasattr(execution, 'sandbox_info'):
+            if execution.sandbox_info.is_vm:
+                vm_count += 1
+            else:
+                physical_count += 1
+    
+    # Estadísticas de EDR/AV
+    edr_products = Counter()
+    edr_types = Counter()
+    executions_with_edr = 0
+    
+    for execution in executions:
+        if hasattr(execution, 'edr_info'):
+            products = execution.edr_info.detected_products.all()
+            if products.exists():
+                executions_with_edr += 1
+            for product in products:
+                if product.detected:
+                    edr_products[product.name] += 1
+                    edr_types[product.type] += 1
+    
+    # Estadísticas de herramientas de análisis
+    all_tools = Counter()
+    
+    for execution in executions:
+        if hasattr(execution, 'tools_info'):
+            tools = execution.tools_info
+            for tool in tools.reversing_tools + tools.debugging_tools + tools.monitoring_tools + tools.analysis_tools:
+                all_tools[tool] += 1
+    
+    # Estadísticas de idioma y zona horaria
+    languages = Counter()
+    timezones = Counter()
+    
+    for execution in executions:
+        if hasattr(execution, 'system_info'):
+            sysinfo = execution.system_info
+            if sysinfo.language:
+                languages[sysinfo.language] += 1
+            if sysinfo.timezone:
+                timezones[sysinfo.timezone] += 1
+    
+    context = {
+        'total_executions': total_executions,
+        'geo_stats': geo_stats,
+        'os_stats': dict(os_stats.most_common()),
+        'arch_stats': dict(arch_stats.most_common()),
+        'vm_count': vm_count,
+        'physical_count': physical_count,
+        'edr_products': dict(edr_products.most_common(10)),
+        'edr_types': dict(edr_types.most_common()),
+        'executions_with_edr': executions_with_edr,
+        'executions_without_edr': total_executions - executions_with_edr,
+        'all_tools': dict(all_tools.most_common(15)),
+        'languages': dict(languages.most_common(10)),
+        'timezones': dict(timezones.most_common(10)),
+    }
+    
+    return render(request, 'collector/statistics.html', context)
 
 
 @csrf_exempt

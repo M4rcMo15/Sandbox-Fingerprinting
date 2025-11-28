@@ -31,6 +31,34 @@
             margin-bottom: 30px;
         }
         
+        .main-nav {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-link {
+            padding: 8px 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            background: #21262d;
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+        
+        .nav-link.active {
+            background: #1f6feb;
+            border-color: #1f6feb;
+            color: white;
+        }
+        
         h1 {
             color: #58a6ff;
             font-size: 2em;
@@ -225,6 +253,14 @@
     <header>
         <div class="container">
             <h1>🔍 Artefacto Visualizer</h1>
+            <nav class="main-nav">
+                <a href="{% url 'index' %}" class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                    📋 Ejecuciones
+                </a>
+                <a href="{% url 'statistics' %}" class="nav-link {% if request.resolver_match.url_name == 'statistics' %}active{% endif %}">
+                    📊 Estadísticas
+                </a>
+            </nav>
         </div>
     </header>
     

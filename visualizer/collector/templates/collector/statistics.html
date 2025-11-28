@@ -1,0 +1,400 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}Estadísticas - Artefacto Visualizer{% endblock %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 3em;
+        font-weight: bold;
+        color: #58a6ff;
+        margin: 10px 0;
+    }
+    
+    .stat-label {
+        color: #8b949e;
+        font-size: 1.1em;
+    }
+    
+    .chart-container {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chart-title {
+        color: #58a6ff;
+        font-size: 1.3em;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+    
+    canvas {
+        max-height: 400px;
+    }
+    
+    .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .two-column {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="card">
+    <h2>📊 Estadísticas Generales</h2>
+    <p class="meta">Análisis de {{ total_executions }} ejecuciones del agente</p>
+</div>
+
+<!-- Tarjetas de resumen -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Ejecuciones</div>
+        <div class="stat-number">{{ total_executions }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">Países Únicos</div>
+        <div class="stat-number">{{ geo_stats.countries|length }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">IPs Únicas</div>
+        <div class="stat-number">{{ geo_stats.top_ips|length }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-label">Con EDR/AV</div>
+        <div class="stat-number">{{ executions_with_edr }}</div>
+    </div>
+</div>
+
+<!-- Gráficos de geolocalización -->
+<div class="two-column">
+    <div class="chart-container">
+        <div class="chart-title">🌍 Distribución por País</div>
+        <canvas id="countriesChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">🏙️ Top Ciudades</div>
+        <canvas id="citiesChart"></canvas>
+    </div>
+</div>
+
+<!-- Gráficos de sistemas operativos -->
+<div class="two-column">
+    <div class="chart-container">
+        <div class="chart-title">💻 Sistemas Operativos</div>
+        <canvas id="osChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">🏗️ Arquitecturas</div>
+        <canvas id="archChart"></canvas>
+    </div>
+</div>
+
+<!-- Gráficos de VM y EDR -->
+<div class="two-column">
+    <div class="chart-container">
+        <div class="chart-title">🖥️ Entorno de Ejecución</div>
+        <canvas id="vmChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">🛡️ Detección EDR/AV</div>
+        <canvas id="edrDetectionChart"></canvas>
+    </div>
+</div>
+
+<!-- Gráficos de productos EDR -->
+{% if edr_products %}
+<div class="chart-container">
+    <div class="chart-title">🔒 Productos EDR/AV Detectados</div>
+    <canvas id="edrProductsChart"></canvas>
+</div>
+{% endif %}
+
+<!-- Gráficos de herramientas -->
+{% if all_tools %}
+<div class="chart-container">
+    <div class="chart-title">🔧 Herramientas de Análisis Detectadas</div>
+    <canvas id="toolsChart"></canvas>
+</div>
+{% endif %}
+
+<!-- Gráficos de idiomas y zonas horarias -->
+<div class="two-column">
+    {% if languages %}
+    <div class="chart-container">
+        <div class="chart-title">🌐 Idiomas del Sistema</div>
+        <canvas id="languagesChart"></canvas>
+    </div>
+    {% endif %}
+    
+    {% if timezones %}
+    <div class="chart-container">
+        <div class="chart-title">🕐 Zonas Horarias</div>
+        <canvas id="timezonesChart"></canvas>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Configuración de colores
+    const colors = [
+        '#58a6ff', '#1f6feb', '#388bfd', '#58a6ff', '#79c0ff',
+        '#f85149', '#da3633', '#ff7b72', '#ffa198', '#ffb3b3',
+        '#56d364', '#3fb950', '#2ea043', '#238636', '#196c2e',
+        '#d29922', '#bb8009', '#9e6a03', '#845306', '#693e00',
+        '#bc8cff', '#a371f7', '#8957e5', '#6e40c9', '#553098'
+    ];
+    
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#c9d1d9'
+                }
+            }
+        }
+    };
+    
+    // Gráfico de países
+    {% if geo_stats.countries %}
+    new Chart(document.getElementById('countriesChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ geo_stats.countries.keys|safe }},
+            datasets: [{
+                data: {{ geo_stats.countries.values|safe }},
+                backgroundColor: colors
+            }]
+        },
+        options: chartOptions
+    });
+    {% endif %}
+    
+    // Gráfico de ciudades
+    {% if geo_stats.cities %}
+    new Chart(document.getElementById('citiesChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ geo_stats.cities.keys|safe }},
+            datasets: [{
+                data: {{ geo_stats.cities.values|safe }},
+                backgroundColor: colors
+            }]
+        },
+        options: chartOptions
+    });
+    {% endif %}
+    
+    // Gráfico de sistemas operativos
+    {% if os_stats %}
+    new Chart(document.getElementById('osChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ os_stats.keys|safe }},
+            datasets: [{
+                label: 'Ejecuciones',
+                data: {{ os_stats.values|safe }},
+                backgroundColor: '#58a6ff'
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                },
+                x: {
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Gráfico de arquitecturas
+    {% if arch_stats %}
+    new Chart(document.getElementById('archChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ arch_stats.keys|safe }},
+            datasets: [{
+                data: {{ arch_stats.values|safe }},
+                backgroundColor: colors
+            }]
+        },
+        options: chartOptions
+    });
+    {% endif %}
+    
+    // Gráfico de VM vs Físico
+    {% if vm_count or physical_count %}
+    new Chart(document.getElementById('vmChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Máquina Virtual', 'Físico'],
+            datasets: [{
+                data: [{{ vm_count }}, {{ physical_count }}],
+                backgroundColor: ['#f85149', '#56d364']
+            }]
+        },
+        options: chartOptions
+    });
+    {% endif %}
+    
+    // Gráfico de detección EDR
+    new Chart(document.getElementById('edrDetectionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Con EDR/AV', 'Sin EDR/AV'],
+            datasets: [{
+                data: [{{ executions_with_edr }}, {{ executions_without_edr }}],
+                backgroundColor: ['#f85149', '#56d364']
+            }]
+        },
+        options: chartOptions
+    });
+    
+    // Gráfico de productos EDR
+    {% if edr_products %}
+    new Chart(document.getElementById('edrProductsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ edr_products.keys|safe }},
+            datasets: [{
+                label: 'Detecciones',
+                data: {{ edr_products.values|safe }},
+                backgroundColor: '#f85149'
+            }]
+        },
+        options: {
+            ...chartOptions,
+            indexAxis: 'y',
+            scales: {
+                y: {
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                },
+                x: {
+                    beginAtZero: true,
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Gráfico de herramientas
+    {% if all_tools %}
+    new Chart(document.getElementById('toolsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ all_tools.keys|safe }},
+            datasets: [{
+                label: 'Detecciones',
+                data: {{ all_tools.values|safe }},
+                backgroundColor: '#d29922'
+            }]
+        },
+        options: {
+            ...chartOptions,
+            indexAxis: 'y',
+            scales: {
+                y: {
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                },
+                x: {
+                    beginAtZero: true,
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                }
+            }
+        }
+    });
+    {% endif %}
+    
+    // Gráfico de idiomas
+    {% if languages %}
+    new Chart(document.getElementById('languagesChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ languages.keys|safe }},
+            datasets: [{
+                data: {{ languages.values|safe }},
+                backgroundColor: colors
+            }]
+        },
+        options: chartOptions
+    });
+    {% endif %}
+    
+    // Gráfico de zonas horarias
+    {% if timezones %}
+    new Chart(document.getElementById('timezonesChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ timezones.keys|safe }},
+            datasets: [{
+                label: 'Ejecuciones',
+                data: {{ timezones.values|safe }},
+                backgroundColor: '#bc8cff'
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#c9d1d9' },
+                    grid: { color: '#30363d' }
+                },
+                x: {
+                    ticks: { 
+                        color: '#c9d1d9',
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: { color: '#30363d' }
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

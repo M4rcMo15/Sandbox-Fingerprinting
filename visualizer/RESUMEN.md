@@ -65,19 +65,21 @@ visualizer/
 9. **EDRInfo** - Información de EDR/AV
 10. **EDRProduct** - Productos EDR/AV detectados
 
-### 🌐 Endpoints y Vistas (4 endpoints)
+### 🌐 Endpoints y Vistas (5 endpoints)
 
 1. **GET /** - Lista de todas las ejecuciones
-2. **GET /execution/{GUID}/** - Detalle de una ejecución
-3. **POST /api/collect** - Recepción de datos del agente
-4. **GET /admin/** - Panel de administración Django
+2. **GET /statistics/** - Página de estadísticas con gráficos
+3. **GET /execution/{GUID}/** - Detalle de una ejecución
+4. **POST /api/collect** - Recepción de datos del agente
+5. **GET /admin/** - Panel de administración Django
 
 ### 🎨 Interfaz Web
 
 #### Características de Diseño
 - ✅ Tema oscuro moderno (estilo GitHub)
 - ✅ Responsive y mobile-friendly
-- ✅ Sin dependencias de JavaScript
+- ✅ Menú de navegación en cabecera
+- ✅ Gráficos interactivos con Chart.js
 - ✅ Desplegables (`<details>`) para organizar información
 - ✅ Tablas para datos estructurados
 - ✅ Badges de colores para estados
@@ -88,6 +90,7 @@ visualizer/
 ```
 ┌─────────────────────────────────────────────────┐
 │  🔍 Artefacto Visualizer                        │
+│  [📋 Ejecuciones] [📊 Estadísticas]             │
 ├─────────────────────────────────────────────────┤
 │  📊 Ejecuciones Recibidas                       │
 │  Total de ejecuciones: 5                        │
@@ -99,6 +102,37 @@ visualizer/
 │  🖥️ LAPTOP-XYZ - 28/11/2024 09:15:22           │
 │  GUID: 660f9511-f3ac-52e5-b827-557766551111     │
 │  [Físico]                                       │
+└─────────────────────────────────────────────────┘
+```
+
+#### Página de Estadísticas (/statistics/)
+```
+┌─────────────────────────────────────────────────┐
+│  🔍 Artefacto Visualizer                        │
+│  [📋 Ejecuciones] [📊 Estadísticas]             │
+├─────────────────────────────────────────────────┤
+│  📊 Estadísticas Generales                      │
+│  Análisis de 25 ejecuciones del agente          │
+├─────────────────────────────────────────────────┤
+│  [Total: 25] [Países: 8] [IPs: 15] [EDR: 12]   │
+├─────────────────────────────────────────────────┤
+│  🌍 Distribución por País    🏙️ Top Ciudades    │
+│  [Gráfico de Pastel]         [Gráfico Donut]    │
+├─────────────────────────────────────────────────┤
+│  💻 Sistemas Operativos      🏗️ Arquitecturas   │
+│  [Gráfico de Barras]         [Gráfico Pastel]   │
+├─────────────────────────────────────────────────┤
+│  🖥️ Entorno de Ejecución    🛡️ Detección EDR   │
+│  [VM vs Físico]              [Con/Sin EDR]       │
+├─────────────────────────────────────────────────┤
+│  🔒 Productos EDR/AV Detectados                 │
+│  [Gráfico de Barras Horizontal]                 │
+├─────────────────────────────────────────────────┤
+│  🔧 Herramientas de Análisis Detectadas         │
+│  [Gráfico de Barras Horizontal]                 │
+├─────────────────────────────────────────────────┤
+│  🌐 Idiomas del Sistema      🕐 Zonas Horarias  │
+│  [Gráfico de Pastel]         [Gráfico Barras]   │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -230,12 +264,26 @@ visualizer/
 #### Visualización
 - ✅ Lista de ejecuciones
 - ✅ Detalle completo por ejecución
+- ✅ Página de estadísticas con gráficos interactivos
+- ✅ Menú de navegación entre secciones
 - ✅ Desplegables para organizar información
 - ✅ Tablas para datos estructurados
 - ✅ Badges visuales
 - ✅ Visualización de screenshots
 - ✅ Formato de fechas
 - ✅ Truncado de textos largos
+
+#### Estadísticas y Gráficos
+- ✅ Distribución geográfica (países y ciudades)
+- ✅ Top IPs más activas
+- ✅ Sistemas operativos y arquitecturas
+- ✅ Detección de VMs vs físicos
+- ✅ Productos EDR/AV detectados
+- ✅ Herramientas de análisis encontradas
+- ✅ Idiomas y zonas horarias
+- ✅ Gráficos de pastel, donut y barras
+- ✅ Colores diferenciados por categoría
+- ✅ Responsive y adaptable
 
 #### Administración
 - ✅ Panel de admin Django
@@ -303,13 +351,14 @@ python manage.py dbshell       # Shell de BD
 
 ### 📈 Estadísticas del Proyecto
 
-- **Archivos creados**: 23
+- **Archivos creados**: 25
 - **Modelos de BD**: 10
-- **Vistas**: 3 + 1 API endpoint
-- **Templates HTML**: 3
-- **Líneas de código Python**: ~800
-- **Líneas de código HTML/CSS**: ~600
-- **Documentación**: ~3000 líneas
+- **Vistas**: 4 + 1 API endpoint
+- **Templates HTML**: 4
+- **Líneas de código Python**: ~1000
+- **Líneas de código HTML/CSS/JS**: ~1200
+- **Documentación**: ~3500 líneas
+- **Gráficos implementados**: 10+
 
 ### 🎉 Estado del Proyecto
 
