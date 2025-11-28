@@ -7,6 +7,7 @@ class AgentExecution(models.Model):
     guid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     timestamp = models.DateTimeField()
     hostname = models.CharField(max_length=255)
+    public_ip = models.CharField(max_length=50, blank=True)
     received_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -31,6 +32,8 @@ class SystemInfo(models.Model):
     execution = models.OneToOneField(AgentExecution, on_delete=models.CASCADE, related_name='system_info')
     os = models.CharField(max_length=255)
     architecture = models.CharField(max_length=50)
+    language = models.CharField(max_length=100, blank=True)
+    timezone = models.CharField(max_length=100, blank=True)
     cpu_count = models.IntegerField()
     total_ram_mb = models.BigIntegerField()
     total_disk_bytes = models.BigIntegerField()
@@ -96,3 +99,25 @@ class EDRProduct(models.Model):
     type = models.CharField(max_length=50)  # EDR, AV, Sandbox
     detected = models.BooleanField(default=False)
     method = models.CharField(max_length=50)  # process, driver, registry
+
+
+
+class GeoLocation(models.Model):
+    execution = models.OneToOneField(AgentExecution, on_delete=models.CASCADE, related_name='geo_location')
+    country = models.CharField(max_length=100, blank=True)
+    country_code = models.CharField(max_length=10, blank=True)
+    region = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(default=0.0)
+    longitude = models.FloatField(default=0.0)
+    isp = models.CharField(max_length=255, blank=True)
+    organization = models.CharField(max_length=255, blank=True)
+
+
+class ToolsInfo(models.Model):
+    execution = models.OneToOneField(AgentExecution, on_delete=models.CASCADE, related_name='tools_info')
+    reversing_tools = models.JSONField(default=list)
+    debugging_tools = models.JSONField(default=list)
+    monitoring_tools = models.JSONField(default=list)
+    virtualization_tools = models.JSONField(default=list)
+    analysis_tools = models.JSONField(default=list)

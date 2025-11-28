@@ -73,6 +73,10 @@ func CollectSystemInfo() *models.SystemInfo {
 	// Uptime
 	info.UptimeSeconds = getSystemUptime()
 
+	// Language y Timezone
+	info.Language = getSystemLanguage()
+	info.Timezone = getSystemTimezone()
+
 	// Screenshot
 	info.Screenshot = captureScreenshot()
 
@@ -809,4 +813,45 @@ func captureScreenshot() string {
 	}
 
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func getSystemLanguage() string {
+	kernel32 := windows.NewLazyDLL("kernel32.dll")
+	getUserDefaultLocaleName := kernel32.NewProc("GetUserDefaultLocaleName")
+
+	var localeName [85]uint16
+	ret, _, _ := getUserDefaultLocaleName.Call(
+		uintptr(unsafe.Pointer(&localeName[0])),
+		uintptr(len(localeName)),
+	)
+
+	if ret == 0 {
+		return "Unknown"
+	}
+
+	return windows.UTF16ToString(localeName[:])
+}
+
+func getSystemTimezone() string {
+	kernel32 := windows.NewLazyDLL("kernel32.dll")
+	getTimeZoneInformation := kernel32.NewProc("GetTimeZoneInformation")
+
+	type TIME_ZONE_INFORMATION struct {
+		Bias         int32
+		StandardName [32]uint16
+		StandardDate [16]byte
+		StandardBias int32
+		DaylightName [32]uint16
+		DaylightDate [16]byte
+		DaylightBias int32
+	}
+
+	var tzi TIME_ZONE_INFORMATION
+	ret, _, _ := getTimeZoneInformation.Call(uintptr(unsafe.Pointer(&tzi)))
+
+	if ret == 0xFFFFFFFF {
+		return "Unknown"
+	}
+
+	return windows.UTF16ToString(tzi.StandardName[:])
 }

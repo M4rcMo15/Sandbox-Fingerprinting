@@ -35,7 +35,8 @@ def collect_data(request):
         # Crear ejecución con GUID único
         execution = AgentExecution.objects.create(
             timestamp=parse_datetime(data.get('timestamp')),
-            hostname=data.get('hostname', 'unknown')
+            hostname=data.get('hostname', 'unknown'),
+            public_ip=data.get('public_ip', '')
         )
         
         # Guardar SandboxInfo
@@ -61,6 +62,8 @@ def collect_data(request):
                 execution=execution,
                 os=sysinfo_data.get('os', ''),
                 architecture=sysinfo_data.get('architecture', ''),
+                language=sysinfo_data.get('language', ''),
+                timezone=sysinfo_data.get('timezone', ''),
                 cpu_count=sysinfo_data.get('cpu_count', 0),
                 total_ram_mb=sysinfo_data.get('total_ram_mb', 0),
                 total_disk_bytes=sysinfo_data.get('total_disk_bytes', 0),
@@ -142,6 +145,35 @@ def collect_data(request):
                     detected=prod.get('detected', False),
                     method=prod.get('method', '')
                 )
+        
+        # Guardar GeoLocation
+        if 'geo_location' in data and data['geo_location']:
+            geo = data['geo_location']
+            from .models import GeoLocation
+            GeoLocation.objects.create(
+                execution=execution,
+                country=geo.get('country', ''),
+                country_code=geo.get('country_code', ''),
+                region=geo.get('region', ''),
+                city=geo.get('city', ''),
+                latitude=geo.get('latitude', 0.0),
+                longitude=geo.get('longitude', 0.0),
+                isp=geo.get('isp', ''),
+                organization=geo.get('organization', '')
+            )
+        
+        # Guardar ToolsInfo
+        if 'tools_info' in data and data['tools_info']:
+            tools = data['tools_info']
+            from .models import ToolsInfo
+            ToolsInfo.objects.create(
+                execution=execution,
+                reversing_tools=tools.get('reversing_tools', []),
+                debugging_tools=tools.get('debugging_tools', []),
+                monitoring_tools=tools.get('monitoring_tools', []),
+                virtualization_tools=tools.get('virtualization_tools', []),
+                analysis_tools=tools.get('analysis_tools', [])
+            )
         
         return JsonResponse({
             'status': 'success',

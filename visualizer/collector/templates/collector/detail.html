@@ -20,8 +20,46 @@
             <div class="info-label">Recibido</div>
             <div class="info-value">{{ execution.received_at|date:"d/m/Y H:i:s" }}</div>
         </div>
+        {% if execution.public_ip %}
+        <div class="info-item">
+            <div class="info-label">IP Pública</div>
+            <div class="info-value">{{ execution.public_ip }}</div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+{% if execution.geo_location %}
+<div class="card">
+    <h2>📍 Geolocalización</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">País</div>
+            <div class="info-value">{{ execution.geo_location.country }} ({{ execution.geo_location.country_code }})</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Región</div>
+            <div class="info-value">{{ execution.geo_location.region }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Ciudad</div>
+            <div class="info-value">{{ execution.geo_location.city }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Coordenadas</div>
+            <div class="info-value">{{ execution.geo_location.latitude }}, {{ execution.geo_location.longitude }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">ISP</div>
+            <div class="info-value">{{ execution.geo_location.isp }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Organización</div>
+            <div class="info-value">{{ execution.geo_location.organization }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if execution.sandbox_info %}
 <div class="card">
@@ -122,6 +160,18 @@
             <div class="info-label">BIOS</div>
             <div class="info-value">{{ execution.system_info.bios|truncatewords:10 }}</div>
         </div>
+        {% if execution.system_info.language %}
+        <div class="info-item">
+            <div class="info-label">Idioma</div>
+            <div class="info-value">{{ execution.system_info.language }}</div>
+        </div>
+        {% endif %}
+        {% if execution.system_info.timezone %}
+        <div class="info-item">
+            <div class="info-label">Zona Horaria</div>
+            <div class="info-value">{{ execution.system_info.timezone }}</div>
+        </div>
+        {% endif %}
     </div>
     
     <details>
@@ -391,6 +441,67 @@
         <div class="detail-content">
             {% for driver in execution.edr_info.installed_drivers %}
                 <div class="list-item"><code>{{ driver }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+{% if execution.tools_info %}
+<div class="card">
+    <h2>🔧 Herramientas Detectadas</h2>
+    
+    <details {% if execution.tools_info.reversing_tools %}open{% endif %}>
+        <summary>🔍 Herramientas de Reversing ({{ execution.tools_info.reversing_tools|length }})</summary>
+        <div class="detail-content">
+            {% for tool in execution.tools_info.reversing_tools %}
+                <div class="list-item hooked">{{ tool }}</div>
+            {% empty %}
+                <p>No se detectaron herramientas de reversing</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details {% if execution.tools_info.debugging_tools %}open{% endif %}>
+        <summary>🐛 Herramientas de Debugging ({{ execution.tools_info.debugging_tools|length }})</summary>
+        <div class="detail-content">
+            {% for tool in execution.tools_info.debugging_tools %}
+                <div class="list-item hooked">{{ tool }}</div>
+            {% empty %}
+                <p>No se detectaron herramientas de debugging</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>📊 Herramientas de Monitoreo ({{ execution.tools_info.monitoring_tools|length }})</summary>
+        <div class="detail-content">
+            {% for tool in execution.tools_info.monitoring_tools %}
+                <div class="list-item">{{ tool }}</div>
+            {% empty %}
+                <p>No se detectaron herramientas de monitoreo</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>💻 Herramientas de Virtualización ({{ execution.tools_info.virtualization_tools|length }})</summary>
+        <div class="detail-content">
+            {% for tool in execution.tools_info.virtualization_tools %}
+                <div class="list-item">{{ tool }}</div>
+            {% empty %}
+                <p>No se detectaron herramientas de virtualización</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>🔬 Herramientas de Análisis ({{ execution.tools_info.analysis_tools|length }})</summary>
+        <div class="detail-content">
+            {% for tool in execution.tools_info.analysis_tools %}
+                <div class="list-item">{{ tool }}</div>
+            {% empty %}
+                <p>No se detectaron herramientas de análisis</p>
             {% endfor %}
         </div>
     </details>

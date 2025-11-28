@@ -12,11 +12,22 @@
     {% for execution in executions %}
     <div class="execution-item">
         <a href="{% url 'execution_detail' execution.guid %}">
-            🖥️ {{ execution.hostname }} - {{ execution.timestamp|date:"d/m/Y H:i:s" }}
+            {% if execution.geo_location %}
+                {{ execution.geo_location.country_code|default:"🌍" }} 
+            {% else %}
+                🖥️ 
+            {% endif %}
+            {{ execution.hostname }} - {{ execution.timestamp|date:"d/m/Y H:i:s" }}
         </a>
         <div class="meta">
             <strong>GUID:</strong> <code>{{ execution.guid }}</code> | 
             <strong>Recibido:</strong> {{ execution.received_at|date:"d/m/Y H:i:s" }}
+            {% if execution.public_ip %}
+                | <strong>IP:</strong> {{ execution.public_ip }}
+            {% endif %}
+            {% if execution.geo_location %}
+                | <strong>📍</strong> {{ execution.geo_location.city }}, {{ execution.geo_location.country }}
+            {% endif %}
             
             {% if execution.sandbox_info %}
                 {% if execution.sandbox_info.is_vm %}
@@ -30,6 +41,14 @@
                 {% if execution.edr_info.detected_products.count > 0 %}
                     <span class="badge badge-edr">{{ execution.edr_info.detected_products.count }} EDR/AV</span>
                 {% endif %}
+            {% endif %}
+            
+            {% if execution.tools_info %}
+                {% with total_tools=execution.tools_info.reversing_tools|length %}
+                    {% if total_tools > 0 %}
+                        <span class="badge badge-edr">{{ total_tools }} Herramientas</span>
+                    {% endif %}
+                {% endwith %}
             {% endif %}
         </div>
     </div>

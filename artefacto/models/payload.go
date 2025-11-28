@@ -6,11 +6,14 @@ import "time"
 type Payload struct {
 	Timestamp    time.Time        `json:"timestamp"`
 	Hostname     string           `json:"hostname"`
+	PublicIP     string           `json:"public_ip"`
+	GeoLocation  *GeoLocation     `json:"geo_location"`
 	SandboxInfo  *SandboxInfo     `json:"sandbox_info"`
 	SystemInfo   *SystemInfo      `json:"system_info"`
 	HookInfo     *HookInfo        `json:"hook_info"`
 	CrawlerInfo  *CrawlerInfo     `json:"crawler_info"`
 	EDRInfo      *EDRInfo         `json:"edr_info"`
+	ToolsInfo    *ToolsInfo       `json:"tools_info"`
 }
 
 // SandboxInfo - Información de detección de sandbox
@@ -28,6 +31,8 @@ type SandboxInfo struct {
 type SystemInfo struct {
 	OS              string            `json:"os"`
 	Architecture    string            `json:"architecture"`
+	Language        string            `json:"language"`
+	Timezone        string            `json:"timezone"`
 	CPUCount        int               `json:"cpu_count"`
 	TotalRAM        uint64            `json:"total_ram_mb"`
 	TotalDisk       int64             `json:"total_disk_bytes"`
@@ -97,4 +102,25 @@ type EDRProduct struct {
 	Type     string `json:"type"` // "EDR", "AV", "Sandbox"
 	Detected bool   `json:"detected"`
 	Method   string `json:"method"` // "process", "driver", "registry"
+}
+
+// GeoLocation - Información de geolocalización
+type GeoLocation struct {
+	Country     string  `json:"country"`
+	CountryCode string  `json:"country_code"`
+	Region      string  `json:"region"`
+	City        string  `json:"city"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	ISP         string  `json:"isp"`
+	Organization string `json:"organization"`
+}
+
+// ToolsInfo - Información de herramientas de análisis detectadas
+type ToolsInfo struct {
+	ReversingTools []string `json:"reversing_tools"`
+	DebuggingTools []string `json:"debugging_tools"`
+	MonitoringTools []string `json:"monitoring_tools"`
+	VirtualizationTools []string `json:"virtualization_tools"`
+	AnalysisTools []string `json:"analysis_tools"`
 }

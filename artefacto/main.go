@@ -31,9 +31,21 @@ func main() {
 		Hostname:  hostname,
 	}
 
+	// Obtener IP pública y geolocalización (antes de los colectores paralelos)
+	fmt.Println("[+] Obteniendo IP pública...")
+	payload.PublicIP = collectors.GetPublicIP()
+	if payload.PublicIP != "" {
+		fmt.Printf("[✓] IP pública: %s\n", payload.PublicIP)
+		fmt.Println("[+] Obteniendo geolocalización...")
+		payload.GeoLocation = collectors.GetGeoLocation(payload.PublicIP)
+		if payload.GeoLocation != nil {
+			fmt.Printf("[✓] Ubicación: %s, %s\n", payload.GeoLocation.City, payload.GeoLocation.Country)
+		}
+	}
+
 	// WaitGroup para ejecutar colectores en paralelo
 	var wg sync.WaitGroup
-	wg.Add(5)
+	wg.Add(6)
 
 	// 1. CheckSandbox
 	go func() {
@@ -74,6 +86,14 @@ func main() {
 		fmt.Println("[+] Ejecutando EDRChecker...")
 		payload.EDRInfo = collectors.DetectEDR()
 		fmt.Println("[✓] EDRChecker completado")
+	}()
+
+	// 6. ToolsDetector
+	go func() {
+		defer wg.Done()
+		fmt.Println("[+] Ejecutando ToolsDetector...")
+		payload.ToolsInfo = collectors.DetectTools()
+		fmt.Println("[✓] ToolsDetector completado")
 	}()
 
 	// Esperar a que todos los colectores terminen
@@ -135,6 +155,17 @@ func printSummary(payload *models.Payload) {
 		for _, product := range payload.EDRInfo.DetectedProducts {
 			fmt.Printf("  - %s (método: %s)\n", product.Name, product.Method)
 		}
+	}
+
+	if payload.ToolsInfo != nil {
+		totalTools := len(payload.ToolsInfo.ReversingTools) + len(payload.ToolsInfo.DebuggingTools) + 
+			len(payload.ToolsInfo.MonitoringTools) + len(payload.ToolsInfo.VirtualizationTools) + 
+			len(payload.ToolsInfo.AnalysisTools)
+		fmt.Printf("Herramientas detectadas: %d\n", totalTools)
+	}
+
+	if payload.GeoLocation != nil {
+		fmt.Printf("Ubicación: %s, %s (%s)\n", payload.GeoLocation.City, payload.GeoLocation.Country, payload.GeoLocation.CountryCode)
 	}
 
 	fmt.Println("=============================")
