@@ -11,6 +11,7 @@ from .models import (
     NetworkConnection, HookInfo, HookedFunction, CrawlerInfo,
     EDRInfo, EDRProduct, GeoLocation, ToolsInfo
 )
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 def index(request):
@@ -109,6 +110,7 @@ def statistics(request):
             if sysinfo.timezone:
                 timezones[sysinfo.timezone] += 1
     
+    # Convertir a formato JSON para JavaScript
     context = {
         'total_executions': total_executions,
         'geo_stats': geo_stats,
@@ -123,6 +125,14 @@ def statistics(request):
         'all_tools': dict(all_tools.most_common(15)),
         'languages': dict(languages.most_common(10)),
         'timezones': dict(timezones.most_common(10)),
+        # Versiones JSON para JavaScript
+        'geo_stats_json': json.dumps(geo_stats, cls=DjangoJSONEncoder),
+        'os_stats_json': json.dumps(dict(os_stats.most_common()), cls=DjangoJSONEncoder),
+        'arch_stats_json': json.dumps(dict(arch_stats.most_common()), cls=DjangoJSONEncoder),
+        'edr_products_json': json.dumps(dict(edr_products.most_common(10)), cls=DjangoJSONEncoder),
+        'all_tools_json': json.dumps(dict(all_tools.most_common(15)), cls=DjangoJSONEncoder),
+        'languages_json': json.dumps(dict(languages.most_common(10)), cls=DjangoJSONEncoder),
+        'timezones_json': json.dumps(dict(timezones.most_common(10)), cls=DjangoJSONEncoder),
     }
     
     return render(request, 'collector/statistics.html', context)

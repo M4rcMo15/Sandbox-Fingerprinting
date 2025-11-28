@@ -187,94 +187,124 @@
         }
     };
     
+    // Función helper para convertir dict a arrays
+    function dictToArrays(dict) {
+        const keys = Object.keys(dict);
+        const values = Object.values(dict);
+        return { keys, values };
+    }
+    
+    // Cargar datos desde Django
+    const geoStats = {{ geo_stats_json|safe }};
+    const osStats = {{ os_stats_json|safe }};
+    const archStats = {{ arch_stats_json|safe }};
+    const edrProducts = {{ edr_products_json|safe }};
+    const allTools = {{ all_tools_json|safe }};
+    const languages = {{ languages_json|safe }};
+    const timezones = {{ timezones_json|safe }};
+    
     // Gráfico de países
-    {% if geo_stats.countries %}
-    new Chart(document.getElementById('countriesChart'), {
-        type: 'pie',
-        data: {
-            labels: {{ geo_stats.countries.keys|safe }},
-            datasets: [{
-                data: {{ geo_stats.countries.values|safe }},
-                backgroundColor: colors
-            }]
-        },
-        options: chartOptions
-    });
-    {% endif %}
+    if (geoStats.countries && Object.keys(geoStats.countries).length > 0) {
+        const data = dictToArrays(geoStats.countries);
+        new Chart(document.getElementById('countriesChart'), {
+            type: 'pie',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: colors
+                }]
+            },
+            options: chartOptions
+        });
+    }
     
     // Gráfico de ciudades
-    {% if geo_stats.cities %}
-    new Chart(document.getElementById('citiesChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {{ geo_stats.cities.keys|safe }},
-            datasets: [{
-                data: {{ geo_stats.cities.values|safe }},
-                backgroundColor: colors
-            }]
-        },
-        options: chartOptions
-    });
-    {% endif %}
+    if (geoStats.cities && Object.keys(geoStats.cities).length > 0) {
+        const data = dictToArrays(geoStats.cities);
+        new Chart(document.getElementById('citiesChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: colors
+                }]
+            },
+            options: chartOptions
+        });
+    }
     
     // Gráfico de sistemas operativos
-    {% if os_stats %}
-    new Chart(document.getElementById('osChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ os_stats.keys|safe }},
-            datasets: [{
-                label: 'Ejecuciones',
-                data: {{ os_stats.values|safe }},
-                backgroundColor: '#58a6ff'
-            }]
-        },
-        options: {
-            ...chartOptions,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+    if (osStats && Object.keys(osStats).length > 0) {
+        const data = dictToArrays(osStats);
+        new Chart(document.getElementById('osChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Ejecuciones',
+                    data: data.values,
+                    backgroundColor: '#58a6ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#c9d1d9'
+                        }
+                    }
                 },
-                x: {
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    },
+                    x: {
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+    }
     
     // Gráfico de arquitecturas
-    {% if arch_stats %}
-    new Chart(document.getElementById('archChart'), {
-        type: 'pie',
-        data: {
-            labels: {{ arch_stats.keys|safe }},
-            datasets: [{
-                data: {{ arch_stats.values|safe }},
-                backgroundColor: colors
-            }]
-        },
-        options: chartOptions
-    });
-    {% endif %}
+    if (archStats && Object.keys(archStats).length > 0) {
+        const data = dictToArrays(archStats);
+        new Chart(document.getElementById('archChart'), {
+            type: 'pie',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: colors
+                }]
+            },
+            options: chartOptions
+        });
+    }
     
     // Gráfico de VM vs Físico
-    {% if vm_count or physical_count %}
-    new Chart(document.getElementById('vmChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Máquina Virtual', 'Físico'],
-            datasets: [{
-                data: [{{ vm_count }}, {{ physical_count }}],
-                backgroundColor: ['#f85149', '#56d364']
-            }]
-        },
-        options: chartOptions
-    });
-    {% endif %}
+    const vmCount = {{ vm_count }};
+    const physicalCount = {{ physical_count }};
+    if (vmCount > 0 || physicalCount > 0) {
+        new Chart(document.getElementById('vmChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Máquina Virtual', 'Físico'],
+                datasets: [{
+                    data: [vmCount, physicalCount],
+                    backgroundColor: ['#f85149', '#56d364']
+                }]
+            },
+            options: chartOptions
+        });
+    }
     
     // Gráfico de detección EDR
     new Chart(document.getElementById('edrDetectionChart'), {
@@ -290,111 +320,139 @@
     });
     
     // Gráfico de productos EDR
-    {% if edr_products %}
-    new Chart(document.getElementById('edrProductsChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ edr_products.keys|safe }},
-            datasets: [{
-                label: 'Detecciones',
-                data: {{ edr_products.values|safe }},
-                backgroundColor: '#f85149'
-            }]
-        },
-        options: {
-            ...chartOptions,
-            indexAxis: 'y',
-            scales: {
-                y: {
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+    if (edrProducts && Object.keys(edrProducts).length > 0) {
+        const data = dictToArrays(edrProducts);
+        new Chart(document.getElementById('edrProductsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Detecciones',
+                    data: data.values,
+                    backgroundColor: '#f85149'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#c9d1d9'
+                        }
+                    }
                 },
-                x: {
-                    beginAtZero: true,
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+                scales: {
+                    y: {
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    },
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+    }
     
     // Gráfico de herramientas
-    {% if all_tools %}
-    new Chart(document.getElementById('toolsChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ all_tools.keys|safe }},
-            datasets: [{
-                label: 'Detecciones',
-                data: {{ all_tools.values|safe }},
-                backgroundColor: '#d29922'
-            }]
-        },
-        options: {
-            ...chartOptions,
-            indexAxis: 'y',
-            scales: {
-                y: {
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+    if (allTools && Object.keys(allTools).length > 0) {
+        const data = dictToArrays(allTools);
+        new Chart(document.getElementById('toolsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Detecciones',
+                    data: data.values,
+                    backgroundColor: '#d29922'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#c9d1d9'
+                        }
+                    }
                 },
-                x: {
-                    beginAtZero: true,
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+                scales: {
+                    y: {
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    },
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
+                    }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+    }
     
     // Gráfico de idiomas
-    {% if languages %}
-    new Chart(document.getElementById('languagesChart'), {
-        type: 'pie',
-        data: {
-            labels: {{ languages.keys|safe }},
-            datasets: [{
-                data: {{ languages.values|safe }},
-                backgroundColor: colors
-            }]
-        },
-        options: chartOptions
-    });
-    {% endif %}
+    if (languages && Object.keys(languages).length > 0) {
+        const data = dictToArrays(languages);
+        new Chart(document.getElementById('languagesChart'), {
+            type: 'pie',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: colors
+                }]
+            },
+            options: chartOptions
+        });
+    }
     
     // Gráfico de zonas horarias
-    {% if timezones %}
-    new Chart(document.getElementById('timezonesChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ timezones.keys|safe }},
-            datasets: [{
-                label: 'Ejecuciones',
-                data: {{ timezones.values|safe }},
-                backgroundColor: '#bc8cff'
-            }]
-        },
-        options: {
-            ...chartOptions,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#c9d1d9' },
-                    grid: { color: '#30363d' }
+    if (timezones && Object.keys(timezones).length > 0) {
+        const data = dictToArrays(timezones);
+        new Chart(document.getElementById('timezonesChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Ejecuciones',
+                    data: data.values,
+                    backgroundColor: '#bc8cff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#c9d1d9'
+                        }
+                    }
                 },
-                x: {
-                    ticks: { 
-                        color: '#c9d1d9',
-                        maxRotation: 45,
-                        minRotation: 45
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#c9d1d9' },
+                        grid: { color: '#30363d' }
                     },
-                    grid: { color: '#30363d' }
+                    x: {
+                        ticks: { 
+                            color: '#c9d1d9',
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: { color: '#30363d' }
+                    }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+    }
 </script>
 {% endblock %}
