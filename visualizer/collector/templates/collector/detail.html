@@ -1,0 +1,401 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}Detalle - {{ execution.hostname }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" class="back-link">← Volver a la lista</a>
+
+<div class="card">
+    <h2>🖥️ {{ execution.hostname }}</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">GUID de Ejecución</div>
+            <div class="info-value"><code>{{ execution.guid }}</code></div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Timestamp</div>
+            <div class="info-value">{{ execution.timestamp|date:"d/m/Y H:i:s" }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Recibido</div>
+            <div class="info-value">{{ execution.received_at|date:"d/m/Y H:i:s" }}</div>
+        </div>
+    </div>
+</div>
+
+{% if execution.sandbox_info %}
+<div class="card">
+    <h2>🔍 Detección de Sandbox</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">¿Es VM?</div>
+            <div class="info-value">
+                {% if execution.sandbox_info.is_vm %}
+                    <span class="badge badge-vm">SÍ</span>
+                {% else %}
+                    <span class="badge badge-physical">NO</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Temperatura CPU</div>
+            <div class="info-value">{{ execution.sandbox_info.cpu_temperature|default:"N/A" }}°C</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Ventanas Abiertas</div>
+            <div class="info-value">{{ execution.sandbox_info.window_count }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Privilegio Debug</div>
+            <div class="info-value">{{ execution.sandbox_info.has_debug_privilege|yesno:"Sí,No" }}</div>
+        </div>
+    </div>
+    
+    <details>
+        <summary>📋 Indicadores de VM ({{ execution.sandbox_info.vm_indicators|length }})</summary>
+        <div class="detail-content">
+            {% for indicator in execution.sandbox_info.vm_indicators %}
+                <div class="list-item">{{ indicator }}</div>
+            {% empty %}
+                <p>No se detectaron indicadores de VM</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>📋 Indicadores de Registro ({{ execution.sandbox_info.registry_indicators|length }})</summary>
+        <div class="detail-content">
+            {% for indicator in execution.sandbox_info.registry_indicators %}
+                <div class="list-item">{{ indicator }}</div>
+            {% empty %}
+                <p>No se detectaron indicadores en el registro</p>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>💾 Indicadores de Disco ({{ execution.sandbox_info.disk_indicators|length }})</summary>
+        <div class="detail-content">
+            {% for indicator in execution.sandbox_info.disk_indicators %}
+                <div class="list-item">{{ indicator }}</div>
+            {% empty %}
+                <p>No se detectaron indicadores de disco</p>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+{% if execution.system_info %}
+<div class="card">
+    <h2>💻 Información del Sistema</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Sistema Operativo</div>
+            <div class="info-value">{{ execution.system_info.os }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Arquitectura</div>
+            <div class="info-value">{{ execution.system_info.architecture }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">CPUs</div>
+            <div class="info-value">{{ execution.system_info.cpu_count }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">RAM Total</div>
+            <div class="info-value">{{ execution.system_info.total_ram_mb }} MB</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Disco Total</div>
+            <div class="info-value">{{ execution.system_info.total_disk_bytes|filesizeformat }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Uptime</div>
+            <div class="info-value">{{ execution.system_info.uptime_seconds }} segundos</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Posición del Mouse</div>
+            <div class="info-value">X: {{ execution.system_info.mouse_position_x }}, Y: {{ execution.system_info.mouse_position_y }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">BIOS</div>
+            <div class="info-value">{{ execution.system_info.bios|truncatewords:10 }}</div>
+        </div>
+    </div>
+    
+    <details>
+        <summary>⚙️ Procesos ({{ execution.system_info.processes.count }})</summary>
+        <div class="detail-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>PID</th>
+                        <th>Nombre</th>
+                        <th>Owner</th>
+                        <th>Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for process in execution.system_info.processes.all %}
+                    <tr>
+                        <td>{{ process.pid }}</td>
+                        <td>{{ process.name }}</td>
+                        <td>{{ process.owner }}</td>
+                        <td><code>{{ process.path|truncatechars:60 }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    
+    <details>
+        <summary>🌐 Conexiones de Red ({{ execution.system_info.network_connections.count }})</summary>
+        <div class="detail-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Protocolo</th>
+                        <th>Dirección Local</th>
+                        <th>Dirección Remota</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conn in execution.system_info.network_connections.all %}
+                    <tr>
+                        <td>{{ conn.protocol }}</td>
+                        <td><code>{{ conn.local_addr }}</code></td>
+                        <td><code>{{ conn.remote_addr }}</code></td>
+                        <td>{{ conn.state }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    
+    <details>
+        <summary>👥 Usuarios ({{ execution.system_info.users|length }})</summary>
+        <div class="detail-content">
+            {% for user in execution.system_info.users %}
+                <div class="list-item">{{ user }}</div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>👥 Grupos ({{ execution.system_info.groups|length }})</summary>
+        <div class="detail-content">
+            {% for group in execution.system_info.groups %}
+                <div class="list-item">{{ group }}</div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>🔧 Servicios ({{ execution.system_info.services|length }})</summary>
+        <div class="detail-content">
+            {% for service in execution.system_info.services %}
+                <div class="list-item">{{ service }}</div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>🔗 Pipes ({{ execution.system_info.pipes|length }})</summary>
+        <div class="detail-content">
+            {% for pipe in execution.system_info.pipes %}
+                <div class="list-item"><code>{{ pipe }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>📦 Aplicaciones Instaladas ({{ execution.system_info.installed_apps|length }})</summary>
+        <div class="detail-content">
+            {% for app in execution.system_info.installed_apps %}
+                <div class="list-item">{{ app }}</div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>📄 Archivos Recientes ({{ execution.system_info.recent_files|length }})</summary>
+        <div class="detail-content">
+            {% for file in execution.system_info.recent_files %}
+                <div class="list-item"><code>{{ file }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>🌍 Variables de Entorno ({{ execution.system_info.environment_variables|length }})</summary>
+        <div class="detail-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in execution.system_info.environment_variables.items %}
+                    <tr>
+                        <td><code>{{ key }}</code></td>
+                        <td><code>{{ value|truncatechars:80 }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    
+    {% if execution.system_info.screenshot_base64 %}
+    <details>
+        <summary>📸 Screenshot</summary>
+        <div class="detail-content">
+            <img src="data:image/png;base64,{{ execution.system_info.screenshot_base64 }}" 
+                 alt="Screenshot" class="screenshot">
+        </div>
+    </details>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if execution.hook_info %}
+<div class="card">
+    <h2>🪝 Detección de Hooks</h2>
+    
+    <details>
+        <summary>🔍 Funciones Analizadas ({{ execution.hook_info.hooked_functions.count }})</summary>
+        <div class="detail-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Módulo</th>
+                        <th>Función</th>
+                        <th>Estado</th>
+                        <th>Primeros Bytes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for func in execution.hook_info.hooked_functions.all %}
+                    <tr {% if func.is_hooked %}class="hooked"{% endif %}>
+                        <td>{{ func.module }}</td>
+                        <td><code>{{ func.function }}</code></td>
+                        <td>
+                            {% if func.is_hooked %}
+                                <span class="badge badge-vm">HOOKED</span>
+                            {% else %}
+                                <span class="badge badge-physical">OK</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ func.first_bytes }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    
+    <details>
+        <summary>📚 DLLs Sospechosas ({{ execution.hook_info.suspicious_dlls|length }})</summary>
+        <div class="detail-content">
+            {% for dll in execution.hook_info.suspicious_dlls %}
+                <div class="list-item">{{ dll }}</div>
+            {% empty %}
+                <p>No se detectaron DLLs sospechosas</p>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+{% if execution.crawler_info %}
+<div class="card">
+    <h2>📁 Crawler de Archivos</h2>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Total de Archivos</div>
+            <div class="info-value">{{ execution.crawler_info.total_files }}</div>
+        </div>
+    </div>
+    
+    <details>
+        <summary>📂 Rutas Escaneadas ({{ execution.crawler_info.scanned_paths|length }})</summary>
+        <div class="detail-content">
+            {% for path in execution.crawler_info.scanned_paths %}
+                <div class="list-item"><code>{{ path }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>📄 Archivos Encontrados ({{ execution.crawler_info.found_files|length }})</summary>
+        <div class="detail-content">
+            {% for file in execution.crawler_info.found_files %}
+                <div class="list-item"><code>{{ file }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+{% if execution.edr_info %}
+<div class="card">
+    <h2>🛡️ Detección de EDR/AV</h2>
+    
+    <details open>
+        <summary>🚨 Productos Detectados ({{ execution.edr_info.detected_products.count }})</summary>
+        <div class="detail-content">
+            {% if execution.edr_info.detected_products.count > 0 %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Detectado</th>
+                        <th>Método</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in execution.edr_info.detected_products.all %}
+                    <tr>
+                        <td><strong>{{ product.name }}</strong></td>
+                        <td><span class="badge badge-edr">{{ product.type }}</span></td>
+                        <td>{{ product.detected|yesno:"Sí,No" }}</td>
+                        <td>{{ product.method }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>No se detectaron productos EDR/AV</p>
+            {% endif %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>⚙️ Procesos en Ejecución ({{ execution.edr_info.running_processes|length }})</summary>
+        <div class="detail-content">
+            {% for process in execution.edr_info.running_processes %}
+                <div class="list-item">{{ process }}</div>
+            {% endfor %}
+        </div>
+    </details>
+    
+    <details>
+        <summary>🔌 Drivers Instalados ({{ execution.edr_info.installed_drivers|length }})</summary>
+        <div class="detail-content">
+            {% for driver in execution.edr_info.installed_drivers %}
+                <div class="list-item"><code>{{ driver }}</code></div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endif %}
+
+<a href="{% url 'index' %}" class="back-link">← Volver a la lista</a>
+{% endblock %}

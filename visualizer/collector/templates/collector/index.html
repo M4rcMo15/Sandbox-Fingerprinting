@@ -1,0 +1,42 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}Ejecuciones del Agente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📊 Ejecuciones Recibidas</h2>
+    <p class="meta">Total de ejecuciones: {{ executions|length }}</p>
+</div>
+
+{% if executions %}
+    {% for execution in executions %}
+    <div class="execution-item">
+        <a href="{% url 'execution_detail' execution.guid %}">
+            🖥️ {{ execution.hostname }} - {{ execution.timestamp|date:"d/m/Y H:i:s" }}
+        </a>
+        <div class="meta">
+            <strong>GUID:</strong> <code>{{ execution.guid }}</code> | 
+            <strong>Recibido:</strong> {{ execution.received_at|date:"d/m/Y H:i:s" }}
+            
+            {% if execution.sandbox_info %}
+                {% if execution.sandbox_info.is_vm %}
+                    <span class="badge badge-vm">VM Detectada</span>
+                {% else %}
+                    <span class="badge badge-physical">Físico</span>
+                {% endif %}
+            {% endif %}
+            
+            {% if execution.edr_info %}
+                {% if execution.edr_info.detected_products.count > 0 %}
+                    <span class="badge badge-edr">{{ execution.edr_info.detected_products.count }} EDR/AV</span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <p>No hay ejecuciones registradas aún. El agente enviará datos a este servidor.</p>
+    </div>
+{% endif %}
+{% endblock %}
