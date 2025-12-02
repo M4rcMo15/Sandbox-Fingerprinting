@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +17,9 @@ import (
 
 func main() {
 	fmt.Println("[*] Iniciando agente de detección de sandbox...")
+
+	// Cargar variables de entorno desde .env
+	loadEnv()
 
 	// Cargar configuración
 	cfg := config.Load()
@@ -187,4 +192,32 @@ func getBinarySize() int64 {
 	}
 
 	return fileInfo.Size()
+}
+
+// loadEnv carga las variables de entorno desde el archivo .env
+func loadEnv() {
+	file, err := os.Open(".env")
+	if err != nil {
+		// Si no existe .env, no pasa nada (usará valores por defecto)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		
+		// Ignorar líneas vacías y comentarios
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Separar clave=valor
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			os.Setenv(key, value)
+		}
+	}
 }

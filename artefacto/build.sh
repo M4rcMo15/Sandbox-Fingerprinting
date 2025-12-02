@@ -65,3 +65,13 @@ echo -e "${GREEN}[✓] Compilación completada${NC}"
 echo ""
 echo "Archivos generados:"
 ls -lh *.exe 2>/dev/null | awk '{print "  - " $9 " (" $5 ")"}'
+echo ""
+echo -e "${BLUE}[i] Configuración actual:${NC}"
+if [ -f .env ]; then
+    grep "SERVER_URL" .env | head -1
+else
+    echo "  No se encontró archivo .env"
+fi
+echo ""
+echo -e "${GREEN}[✓] Listo para ejecutar${NC}"
+echo "  Verifica los resultados en: http://54.37.226.179"

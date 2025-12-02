@@ -116,10 +116,10 @@ func CaptureScreenshot() string {
 		for x := 0; x < int(screenWidth); x++ {
 			offset := (y*int(screenWidth) + x) * 4
 			// BGRA -> RGBA
-			img.Pix[offset+0] = buffer[offset+2] // R
-			img.Pix[offset+1] = buffer[offset+1] // G
-			img.Pix[offset+2] = buffer[offset+0] // B
-			img.Pix[offset+3] = buffer[offset+3] // A
+			img.Pix[offset+0] = buffer[offset+2]
+			img.Pix[offset+1] = buffer[offset+1]
+			img.Pix[offset+2] = buffer[offset+0]
+			img.Pix[offset+3] = buffer[offset+3]
 		}
 	}
 
@@ -130,6 +130,5 @@ func CaptureScreenshot() string {
 		return ""
 	}
 	var encoded_bytes := base64.StdEncoding.EncodeToString(buf.Bytes()) // pasar a bytes el buffer buf.Bytes() base64
-	// Convertir a base64
 	return encoded_bytes
 }

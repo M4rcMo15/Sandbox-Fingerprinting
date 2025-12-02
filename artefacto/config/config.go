@@ -18,9 +18,17 @@ func Load() *Config {
 		serverURL = "http://192.168.1.143:8080/api/collect"
 	}
 
+	// Leer timeout del .env o usar 120 segundos por defecto
+	timeout := 120 * time.Second
+	if timeoutStr := os.Getenv("TIMEOUT"); timeoutStr != "" {
+		if parsedTimeout, err := time.ParseDuration(timeoutStr); err == nil {
+			timeout = parsedTimeout
+		}
+	}
+
 	return &Config{
 		ServerURL:      serverURL,
-		Timeout:        30 * time.Second,
+		Timeout:        timeout,
 		EnableDebug:    os.Getenv("DEBUG") == "1",
 		CollectorCount: 5, // Número de colectores paralelos
 	}
