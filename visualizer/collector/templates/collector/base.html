@@ -260,6 +260,9 @@
                 <a href="{% url 'statistics' %}" class="nav-link {% if request.resolver_match.url_name == 'statistics' %}active{% endif %}">
                     📊 Estadísticas
                 </a>
+                <a href="{% url 'xss_audit:dashboard' %}" class="nav-link {% if 'xss_audit' in request.resolver_match.namespace %}active{% endif %}">
+                    🎯 XSS Audit
+                </a>
             </nav>
         </div>
     </header>

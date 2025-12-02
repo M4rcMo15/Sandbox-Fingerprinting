@@ -7,4 +7,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('collector.urls')),
+    path('', include('xss_audit.urls')),
 ]

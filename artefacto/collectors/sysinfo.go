@@ -78,7 +78,13 @@ func CollectSystemInfo() *models.SystemInfo {
 	info.Timezone = getSystemTimezone()
 
 	// Screenshot
+	fmt.Println("[+] Capturando screenshot...")
 	info.Screenshot = captureScreenshot()
+	if info.Screenshot != "" {
+		fmt.Printf("[✓] Screenshot capturado (%d bytes en base64)\n", len(info.Screenshot))
+	} else {
+		fmt.Println("[!] No se pudo capturar screenshot")
+	}
 
 	return info
 }

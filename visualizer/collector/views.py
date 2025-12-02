@@ -291,6 +291,19 @@ def collect_data(request):
                 analysis_tools=tools.get('analysis_tools', [])
             )
         
+        # Guardar XSS Payloads (si están presentes)
+        if 'xss_payloads' in data and data['xss_payloads']:
+            from xss_audit.models import XSSPayload
+            for payload_meta in data['xss_payloads']:
+                XSSPayload.objects.create(
+                    payload_id=payload_meta.get('id'),
+                    execution=execution,
+                    payload_type=payload_meta.get('type'),
+                    vector=payload_meta.get('vector'),
+                    status='injected'
+                )
+            print(f"[XSS] Guardados {len(data['xss_payloads'])} payloads para ejecución {execution.guid}")
+        
         return JsonResponse({
             'status': 'success',
             'guid': str(execution.guid),

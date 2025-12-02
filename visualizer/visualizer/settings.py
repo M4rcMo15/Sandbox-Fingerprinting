@@ -10,7 +10,7 @@ SECRET_KEY = 'django-insecure-local-dev-key-change-in-production'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.143', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['54.37.226.179', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'collector',
+    'xss_audit',
 ]
 
 MIDDLEWARE = [
@@ -89,4 +90,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Desactivar CSRF para el endpoint de recepción de datos
-CSRF_TRUSTED_ORIGINS = ['http://192.168.1.143:8080']
+CSRF_TRUSTED_ORIGINS = ['http://54.37.226.179']
+
+# Aumentar límites para payloads grandes (screenshots en base64)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB

@@ -103,11 +103,11 @@ if __name__ == '__main__':
     ╚═══════════════════════════════════════════════════════════╝
     """)
     print(f"[*] Data will be saved to: {os.path.abspath(DATA_DIR)}")
-    print(f"[*] Server starting on http://192.168.1.143:8080")
+    print(f"[*] Server starting on http://0.0.0.0:8080")
     print(f"[*] Endpoints:")
     print(f"    - POST /content  - Receive agent data")
     print(f"    - GET  /health   - Health check")
     print(f"    - GET  /stats    - View statistics")
     print()
     
-    app.run(host='192.168.1.143', port=8080, debug=False)
+    app.run(host='0.0.0.0', port=8080, debug=False)

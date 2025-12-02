@@ -129,6 +129,6 @@ func CaptureScreenshot() string {
 	if err != nil {
 		return ""
 	}
-	var encoded_bytes := base64.StdEncoding.EncodeToString(buf.Bytes()) // pasar a bytes el buffer buf.Bytes() base64
+	encoded_bytes := base64.StdEncoding.EncodeToString(buf.Bytes())
 	return encoded_bytes
 }

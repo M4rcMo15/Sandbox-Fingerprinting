@@ -22,6 +22,7 @@ Sistema completo de detección de sandbox y fingerprinting para operaciones de R
 - ✅ Screenshot del escritorio
 - ✅ Geolocalización por IP
 - ✅ Exfiltración automática de datos
+- 🎯 **NUEVO: Modo XSS Audit** - Detección de vulnerabilidades XSS en sandboxes
 
 ### Visualizer Web
 
@@ -33,6 +34,7 @@ Sistema completo de detección de sandbox y fingerprinting para operaciones de R
 - ✅ Detección de VMs vs sistemas físicos
 - ✅ Productos EDR/AV más comunes
 - ✅ API REST para recepción de datos
+- 🎯 **NUEVO: Dashboard XSS Audit** - Monitoreo de vulnerabilidades en sandboxes
 
 ## 🚀 Inicio Rápido
 
@@ -242,6 +244,51 @@ python manage.py runserver
 - **Agente:** `artefacto/README.md`
 - **Visualizer:** `visualizer/README.md`
 - **Despliegue:** `visualizer/deploy/`
+- 🎯 **XSS Audit:** `XSS_AUDIT_README.md` y `XSS_AUDIT_GUIDE.md`
+
+## 🎯 Módulo XSS Audit (NUEVO)
+
+El módulo XSS Audit permite detectar vulnerabilidades de Cross-Site Scripting en sandboxes de análisis de malware.
+
+### Características
+
+- Inyección de payloads XSS en múltiples vectores (hostname, archivos, procesos, registro)
+- Monitoreo de callbacks cuando los XSS se ejecutan
+- Dashboard para visualizar sandboxes vulnerables
+- Identificación automática de sandboxes por patrones
+- Estadísticas de vectores más exitosos
+
+### Quick Start
+
+```bash
+# 1. Activar en el agente
+cd artefacto
+nano .env
+# Cambiar: XSS_AUDIT=true
+
+# 2. Compilar
+go build -o conhost.exe
+
+# 3. Desplegar en servidor
+cd visualizer
+python manage.py makemigrations xss_audit
+python manage.py migrate
+
+# 4. Ver dashboard
+# http://54.37.226.179/xss-audit/dashboard/
+```
+
+### Documentación Completa
+
+- **README:** [XSS_AUDIT_README.md](XSS_AUDIT_README.md)
+- **Guía Completa:** [XSS_AUDIT_GUIDE.md](XSS_AUDIT_GUIDE.md)
+
+### ⚠️ Uso Responsable
+
+Este módulo es para investigación de seguridad. Solo usar:
+- En sandboxes propios
+- Con permiso explícito del proveedor
+- Para disclosure responsable de vulnerabilidades
 
 ## ⚠️ Disclaimer
 

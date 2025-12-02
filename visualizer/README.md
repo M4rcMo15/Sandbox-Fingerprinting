@@ -22,25 +22,25 @@ python manage.py createsuperuser
 
 ## Uso
 
-### Iniciar el servidor en 192.168.1.143:8080
+### Iniciar el servidor
 
 ```bash
-python manage.py runserver 192.168.1.143:8080
+python manage.py runserver 0.0.0.0:8080
 ```
 
 ### Acceder a la aplicación
 
-- **Interfaz web**: http://192.168.1.143:8080/
-- **Panel de administración**: http://192.168.1.143:8080/admin/
-- **Endpoint API**: http://192.168.1.143:8080/api/collect (POST)
+- **Interfaz web**: http://localhost:8080/
+- **Panel de administración**: http://localhost:8080/admin/
+- **Endpoint API**: http://localhost:8080/api/collect (POST)
 
 ## Configurar el agente
 
 Actualiza la configuración del agente en `artefacto/.env`:
 
 ```
-SERVER_URL=http://192.168.1.143:8080/api/collect
-TIMEOUT=30s
+SERVER_URL=http://your-server.com/api/collect
+TIMEOUT=120s
 ```
 
 ## Características

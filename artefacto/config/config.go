@@ -10,12 +10,14 @@ type Config struct {
 	Timeout        time.Duration
 	EnableDebug    bool
 	CollectorCount int
+	XSSAudit       bool
+	CallbackServer string
 }
 
 func Load() *Config {
 	serverURL := os.Getenv("SERVER_URL")
 	if serverURL == "" {
-		serverURL = "http://192.168.1.143:8080/api/collect"
+		serverURL = "http://54.37.226.179/api/collect"
 	}
 
 	// Leer timeout del .env o usar 120 segundos por defecto
@@ -26,10 +28,18 @@ func Load() *Config {
 		}
 	}
 
+	// Callback server para XSS (por defecto el mismo que ServerURL pero sin /api/collect)
+	callbackServer := os.Getenv("CALLBACK_SERVER")
+	if callbackServer == "" {
+		callbackServer = "http://54.37.226.179"
+	}
+
 	return &Config{
 		ServerURL:      serverURL,
 		Timeout:        timeout,
 		EnableDebug:    os.Getenv("DEBUG") == "1",
 		CollectorCount: 5, // Número de colectores paralelos
+		XSSAudit:       os.Getenv("XSS_AUDIT") == "true",
+		CallbackServer: callbackServer,
 	}
 }
