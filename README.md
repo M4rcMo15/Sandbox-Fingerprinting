@@ -1,271 +1,264 @@
-# 🔍 Artefacto - Sistema de Fingerprinting y Visualización
+# 🔍 Artefacto - Sandbox Detection & Fingerprinting Tool
 
-Sistema completo de recopilación y visualización de información de sistemas para operaciones de Red Team.
+Sistema completo de detección de sandbox y fingerprinting para operaciones de Red Team, con visualización web de datos recopilados.
+
+## �  Descripción
+
+**Artefacto** es una herramienta de Red Team que consta de dos componentes principales:
+
+1. **Agente (Go)**: Ejecutable que recopila información detallada del sistema objetivo
+2. **Visualizer (Django)**: Servidor web para visualizar y analizar los datos recopilados
+
+## 🎯 Características
+
+### Agente de Recopilación
+
+- ✅ Detección de sandbox y máquinas virtuales
+- ✅ Detección de EDR/AV (Windows Defender, CrowdStrike, SentinelOne, etc.)
+- ✅ Detección de herramientas de análisis (IDA Pro, x64dbg, Wireshark, etc.)
+- ✅ Información completa del sistema (OS, CPU, RAM, procesos, conexiones)
+- ✅ Detección de hooks en funciones críticas
+- ✅ Crawler de archivos sensibles
+- ✅ Screenshot del escritorio
+- ✅ Geolocalización por IP
+- ✅ Exfiltración automática de datos
+
+### Visualizer Web
+
+- ✅ Dashboard con lista de ejecuciones
+- ✅ Vista detallada de cada ejecución
+- ✅ Página de estadísticas con gráficos interactivos
+- ✅ Análisis geográfico (países, ciudades)
+- ✅ Estadísticas de sistemas operativos y arquitecturas
+- ✅ Detección de VMs vs sistemas físicos
+- ✅ Productos EDR/AV más comunes
+- ✅ API REST para recepción de datos
+
+## 🚀 Inicio Rápido
+
+### Requisitos
+
+**Agente:**
+- Go 1.24 o superior
+- Windows (target)
+
+**Visualizer:**
+- Python 3.8+
+- Django 4.2+
+- Nginx (producción)
+- Gunicorn (producción)
+
+### Instalación
+
+#### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/tu-usuario/artefacto.git
+cd artefacto
+```
+
+#### 2. Configurar el Agente
+
+```bash
+cd artefacto
+
+# Copiar configuración de ejemplo
+cp .env.example .env
+
+# Editar .env con tu servidor
+nano .env
+```
+
+Configurar `SERVER_URL` con la URL de tu servidor visualizer:
+
+```env
+SERVER_URL=http://tu-servidor.com/api/collect
+DEBUG=0
+TIMEOUT=120s
+```
+
+#### 3. Compilar el Agente
+
+```bash
+# Linux/Mac
+./build.sh
+
+# Windows
+go build -o agent.exe -ldflags="-s -w"
+```
+
+#### 4. Configurar el Visualizer
+
+```bash
+cd visualizer
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Configurar base de datos
+python manage.py migrate
+
+# Desarrollo local
+python manage.py runserver 0.0.0.0:8080
+```
+
+## 📊 Uso
+
+### Ejecutar el Agente
+
+```bash
+# Windows
+.\agent.exe
+
+# El agente recopilará datos y los enviará automáticamente al servidor
+```
+
+### Acceder al Visualizer
+
+Abre tu navegador y ve a:
+
+- **Página principal:** http://tu-servidor:8080
+- **Estadísticas:** http://tu-servidor:8080/statistics/
+- **API:** http://tu-servidor:8080/api/collect
+
+## 🔧 Despliegue en Producción
+
+### Opción 1: Despliegue Automático
+
+```bash
+cd visualizer
+chmod +x deploy/quick_deploy.sh
+sudo ./deploy/quick_deploy.sh
+```
+
+### Opción 2: Despliegue Manual
+
+Ver documentación completa en `visualizer/README.md`
 
 ## 📁 Estructura del Proyecto
 
 ```
-.
-├── artefacto/              # Agente de recopilación (Go)
-│   ├── collectors/         # Módulos de detección
-│   ├── config/            # Configuración
-│   ├── exfil/             # Exfiltración de datos
-│   ├── models/            # Estructuras de datos
-│   ├── utils/             # Utilidades
-│   ├── .env               # Configuración del agente
-│   └── agent.exe          # Ejecutable compilado
+artefacto/
+├── artefacto/              # Agente Go
+│   ├── collectors/         # Módulos de recolección
+│   ├── config/             # Configuración
+│   ├── exfil/              # Exfiltración de datos
+│   ├── models/             # Modelos de datos
+│   ├── utils/              # Utilidades
+│   ├── .env.example        # Ejemplo de configuración
+│   ├── build.sh            # Script de compilación
+│   └── main.go             # Punto de entrada
 │
-├── visualizer/            # Servidor web de visualización (Django)
-│   ├── collector/         # App Django principal
-│   ├── visualizer/        # Configuración Django
-│   ├── manage.py          # CLI de Django
-│   ├── requirements.txt   # Dependencias Python
-│   └── *.bat / *.sh       # Scripts de inicio
-│
-├── SETUP_VISUALIZER.md    # Guía de instalación completa
-└── README.md              # Este archivo
+└── visualizer/             # Visualizer Django
+    ├── collector/          # App principal
+    ├── deploy/             # Scripts de despliegue
+    ├── visualizer/         # Configuración Django
+    ├── manage.py           # Django CLI
+    └── requirements.txt    # Dependencias
 ```
 
-## 🚀 Inicio Rápido
+## 🔐 Seguridad
 
-### 1. Configurar el Visualizer
+### Configurar Autenticación
+
+Para proteger el visualizer con autenticación HTTP Basic:
 
 ```bash
-cd visualizer
-pip install -r requirements.txt
-python manage.py makemigrations
-python manage.py migrate
+# En el servidor
+sudo apt install apache2-utils
+sudo mkdir -p /etc/nginx/auth
+sudo htpasswd -c /etc/nginx/auth/.htpasswd tu_usuario
+
+# Actualizar configuración de Nginx
+# Ver visualizer/deploy/nginx.conf para ejemplo
 ```
 
-### 2. Iniciar el Servidor
-
-**Windows:**
-```cmd
-cd visualizer
-start_server.bat
-```
-
-**Linux/Mac:**
-```bash
-cd visualizer
-chmod +x start_server.sh
-./start_server.sh
-```
-
-El servidor estará disponible en: **http://192.168.1.143:8080/**
-
-### 3. Ejecutar el Agente
+### Configurar HTTPS
 
 ```bash
-cd artefacto
-./agent.exe
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d tu-dominio.com
 ```
 
-## 📊 Características
+## 📊 Datos Recopilados
 
-### Agente (Go)
-- ✅ Detección de máquinas virtuales y sandboxes
-- ✅ Recopilación de información del sistema
-- ✅ Detección de hooks en funciones
-- ✅ Crawler de archivos
-- ✅ Detección de EDR/AV
-- ✅ Captura de screenshots
-- ✅ Ejecución paralela de colectores
-- ✅ Envío automático al servidor
+El agente recopila:
 
-### Visualizer (Django)
-- ✅ Recepción automática de datos
-- ✅ GUID único por cada ejecución
-- ✅ Interfaz web moderna (tema oscuro)
-- ✅ Desplegables para organizar información
-- ✅ Tablas para procesos, conexiones, hooks
-- ✅ Visualización de screenshots
-- ✅ Panel de administración
-- ✅ Base de datos SQLite3
-- ✅ API REST para recepción de datos
-
-## 🎯 Información Recopilada
-
-### 🔍 Detección de Sandbox
-- Indicadores de VM (VMware, VirtualBox, Hyper-V, etc.)
-- Indicadores de registro
-- Indicadores de disco
-- Temperatura de CPU
-- Conteo de ventanas
-- Privilegios de debug
-
-### 💻 Información del Sistema
-- Sistema operativo y arquitectura
-- CPU, RAM, disco
-- Procesos en ejecución (PID, nombre, owner, path)
-- Conexiones de red (protocolo, direcciones, estado)
+- Información de sandbox (VM, indicadores)
+- Sistema operativo, arquitectura, idioma
+- Procesos en ejecución
+- Conexiones de red
 - Usuarios y grupos
 - Servicios
 - Variables de entorno
 - Named pipes
 - Aplicaciones instaladas
 - Archivos recientes
-- Posición del mouse
-- Screenshot
-
-### 🪝 Detección de Hooks
-- Funciones analizadas (módulo, función, estado)
-- Primeros bytes de cada función
-- DLLs sospechosas cargadas
-
-### 📁 Crawler de Archivos
-- Rutas escaneadas
-- Archivos encontrados
-- Patrones buscados
-
-### 🛡️ Detección de EDR/AV
-- Productos detectados (nombre, tipo, método)
-- Procesos de seguridad en ejecución
-- Drivers de seguridad instalados
-
-## 📖 Documentación
-
-### Documentación Principal
-- **[SETUP_VISUALIZER.md](SETUP_VISUALIZER.md)** - Guía completa de instalación y configuración
-- **[visualizer/INSTRUCCIONES.md](visualizer/INSTRUCCIONES.md)** - Instrucciones detalladas en español
-- **[visualizer/ARQUITECTURA.md](visualizer/ARQUITECTURA.md)** - Arquitectura del sistema
-- **[visualizer/TROUBLESHOOTING.md](visualizer/TROUBLESHOOTING.md)** - Solución de problemas
-
-### Documentación del Agente
-- **[artefacto/README.md](artefacto/README.md)** - Documentación del agente
-- **[artefacto/TECHNICAL.md](artefacto/TECHNICAL.md)** - Detalles técnicos
-- **[artefacto/USAGE.md](artefacto/USAGE.md)** - Guía de uso
-
-## 🌐 URLs del Visualizer
-
-Una vez iniciado el servidor:
-
-- **Página principal**: http://192.168.1.143:8080/
-  - Lista todas las ejecuciones del agente
-  
-- **Detalle de ejecución**: http://192.168.1.143:8080/execution/{GUID}/
-  - Muestra toda la información de una ejecución
-  
-- **API Endpoint**: http://192.168.1.143:8080/api/collect
-  - Recibe datos del agente (POST)
-  
-- **Admin Panel**: http://192.168.1.143:8080/admin/
-  - Panel de administración (requiere superusuario)
-
-## 🔧 Configuración
-
-### Agente (artefacto/.env)
-```env
-SERVER_URL=http://192.168.1.143:8080/api/collect
-DEBUG=0
-TIMEOUT=30s
-```
-
-### Visualizer (visualizer/visualizer/settings.py)
-```python
-ALLOWED_HOSTS = ['192.168.1.143', 'localhost', '127.0.0.1']
-DEBUG = True  # Cambiar a False en producción
-```
-
-## 🧪 Probar el Sistema
-
-### Opción 1: Ejecutar el agente real
-```bash
-cd artefacto
-./agent.exe
-```
-
-### Opción 2: Usar el script de prueba
-```bash
-cd visualizer
-python test_api.py
-```
-
-## 🗄️ Base de Datos
-
-El visualizer usa SQLite3 con los siguientes modelos:
-
-- `AgentExecution` - Ejecución principal (GUID único)
-- `SandboxInfo` - Detección de sandbox
-- `SystemInfo` - Información del sistema
-- `ProcessInfo` - Procesos individuales
-- `NetworkConnection` - Conexiones de red
-- `HookInfo` - Información de hooks
-- `HookedFunction` - Funciones hooked
-- `CrawlerInfo` - Resultados del crawler
-- `EDRInfo` - Información de EDR
-- `EDRProduct` - Productos EDR/AV detectados
-
-## 🔐 Seguridad
-
-⚠️ **Este sistema está configurado para desarrollo local**
-
-Para uso en producción:
-1. Cambiar `SECRET_KEY` en Django
-2. Establecer `DEBUG = False`
-3. Configurar HTTPS
-4. Agregar autenticación
-5. Configurar firewall
-6. Usar PostgreSQL/MySQL en lugar de SQLite
-7. Implementar rate limiting
-8. Cifrar comunicaciones
-
-## 📦 Dependencias
-
-### Agente (Go)
-Ver `artefacto/go.mod`
-
-### Visualizer (Python)
-```
-Django>=4.2,<5.0
-djangorestframework>=3.14.0
-```
+- Screenshot del escritorio
+- Funciones hooked
+- DLLs sospechosas
+- Archivos sensibles
+- Productos EDR/AV
+- Drivers de seguridad
+- Geolocalización
+- Herramientas de análisis
 
 ## 🛠️ Desarrollo
 
-### Compilar el agente
-```bash
-cd artefacto
-go build -o agent.exe main.go
-```
+### Agente
 
-### Ejecutar tests
 ```bash
-# Agente
 cd artefacto
+
+# Instalar dependencias
+go mod download
+
+# Compilar
+go build -o agent.exe
+
+# Ejecutar tests
 go test ./...
-
-# Visualizer
-cd visualizer
-python manage.py test
 ```
 
-## 📝 Notas
+### Visualizer
 
-- Cada ejecución del agente genera un **GUID único** automáticamente
-- Los datos se almacenan permanentemente en la base de datos
-- El servidor puede recibir múltiples ejecuciones simultáneas
-- La interfaz web no requiere JavaScript
-- Compatible con Windows, Linux y macOS
+```bash
+cd visualizer
 
-## 🆘 Soporte
+# Crear entorno virtual
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 
-Si encuentras problemas:
+# Instalar dependencias
+pip install -r requirements.txt
 
-1. Consulta [TROUBLESHOOTING.md](visualizer/TROUBLESHOOTING.md)
-2. Verifica los logs del servidor Django
-3. Verifica los logs del agente
-4. Prueba con `test_api.py`
-5. Verifica la configuración de red
+# Ejecutar servidor de desarrollo
+python manage.py runserver
+```
 
-## 📄 Licencia
+## 📚 Documentación
 
-Este proyecto es para fines educativos y de investigación en seguridad.
+- **Agente:** `artefacto/README.md`
+- **Visualizer:** `visualizer/README.md`
+- **Despliegue:** `visualizer/deploy/`
 
 ## ⚠️ Disclaimer
 
-Este software está diseñado para operaciones legítimas de Red Team y pruebas de seguridad. El uso indebido de esta herramienta puede ser ilegal. Úsala solo en sistemas donde tengas autorización explícita.
+Esta herramienta está diseñada para uso legítimo en operaciones de Red Team y pruebas de penetración autorizadas. El uso no autorizado de esta herramienta puede ser ilegal. Los autores no se hacen responsables del mal uso de esta herramienta.
+
+## 📝 Licencia
+
+[Especificar licencia]
+
+## 👥 Autores
+
+- Marc Monfort
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor, abre un issue o pull request.
 
 ---
 
-**Desarrollado para operaciones de Red Team y análisis de seguridad**
+**Nota:** Esta herramienta debe usarse únicamente en entornos autorizados y con fines legítimos de seguridad.
