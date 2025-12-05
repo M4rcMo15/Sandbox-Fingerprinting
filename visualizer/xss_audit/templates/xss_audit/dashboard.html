@@ -1,4 +1,5 @@
 {% extends 'collector/base.html' %}
+{% load xss_filters %}
 
 {% block title %}XSS Audit Dashboard{% endblock %}
 
@@ -82,7 +83,7 @@
                     </div>
                     <div class="hit-info">
                         <strong>Execution:</strong> 
-                        <a href="{% url 'collector:detail' hit.payload.execution.guid %}">
+                        <a href="{% url 'execution_detail' hit.payload.execution.guid %}">
                             {{ hit.payload.execution.hostname }}
                         </a>
                     </div>
@@ -107,7 +108,7 @@
             <div class="vector-bar">
                 <div class="vector-label">{{ stat.vector }}</div>
                 <div class="vector-progress">
-                    <div class="vector-fill" style="width: {{ stat.count|add:0|mul:10 }}%"></div>
+                    <div class="vector-fill" style="width: {{ stat.width }}%"></div>
                     <span class="vector-count">{{ stat.count }} hits</span>
                 </div>
             </div>
@@ -159,7 +160,7 @@
     <!-- Enlaces Rápidos -->
     <div class="quick-links">
         <a href="{% url 'xss_audit:payloads_list' %}" class="btn">Ver Todos los Payloads</a>
-        <a href="{% url 'collector:index' %}" class="btn btn-secondary">Volver a Ejecuciones</a>
+        <a href="{% url 'index' %}" class="btn btn-secondary">Volver a Ejecuciones</a>
     </div>
 </div>
 

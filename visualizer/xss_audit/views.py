@@ -148,9 +148,18 @@ def xss_dashboard(request):
     recent_hits = XSSHit.objects.select_related('payload', 'payload__execution').order_by('-triggered_at')[:20]
     
     # Vectores más exitosos
-    vector_stats = XSSPayload.objects.filter(status='triggered').values('vector').annotate(
+    vector_stats_raw = XSSPayload.objects.filter(status='triggered').values('vector').annotate(
         count=Count('id')
     ).order_by('-count')[:10]
+    
+    # Calcular el ancho de la barra para cada vector (count * 10)
+    vector_stats = []
+    for stat in vector_stats_raw:
+        vector_stats.append({
+            'vector': stat['vector'],
+            'count': stat['count'],
+            'width': stat['count'] * 10  # Ancho en porcentaje
+        })
     
     # Sandboxes identificados
     sandboxes = SandboxVulnerability.objects.all().order_by('-hit_count')[:10]

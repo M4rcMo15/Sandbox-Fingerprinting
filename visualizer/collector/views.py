@@ -148,8 +148,20 @@ def collect_data(request):
         data = json.loads(request.body)
         
         # Crear ejecución con GUID único
+        timestamp_str = data.get('timestamp')
+        timestamp = parse_datetime(timestamp_str)
+        if timestamp is None:
+            # Si parse_datetime falla, intentar con dateutil
+            from dateutil import parser as dateutil_parser
+            try:
+                timestamp = dateutil_parser.parse(timestamp_str)
+            except:
+                # Si todo falla, usar la hora actual
+                from django.utils import timezone
+                timestamp = timezone.now()
+        
         execution = AgentExecution.objects.create(
-            timestamp=parse_datetime(data.get('timestamp')),
+            timestamp=timestamp,
             hostname=data.get('hostname', 'unknown'),
             public_ip=data.get('public_ip', ''),
             binary_size_bytes=data.get('binary_size_bytes', 0)
@@ -311,7 +323,12 @@ def collect_data(request):
         }, status=201)
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[ERROR] Exception in collect_data: {str(e)}")
+        print(f"[ERROR] Traceback: {error_details}")
         return JsonResponse({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': error_details if request.GET.get('debug') else None
         }, status=400)
