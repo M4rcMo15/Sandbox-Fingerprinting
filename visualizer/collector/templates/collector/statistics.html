@@ -1,0 +1,411 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}Statistics - Artefacto Visualizer{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active">Statistics</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Statistics</h1>
+    <p class="page-subtitle">Analysis of {{ total_executions }} agent executions</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">Total Executions</div>
+            <div class="summary-card-value text-primary" style="font-size: 2.5rem;">
+                {{ total_executions }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">Unique Countries</div>
+            <div class="summary-card-value text-success" style="font-size: 2.5rem;">
+                {{ geo_stats.countries|length }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">EDR Detected</div>
+            <div class="summary-card-value text-warning" style="font-size: 2.5rem;">
+                {{ executions_with_edr }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">VM Detected</div>
+            <div class="summary-card-value text-danger" style="font-size: 2.5rem;">
+                {{ vm_count }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">Geographic Distribution</div>
+            <div class="card-body">
+                <canvas id="countriesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">Operating Systems</div>
+            <div class="card-body">
+                <canvas id="osChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">VM vs Physical</div>
+            <div class="card-body">
+                <canvas id="vmChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">EDR/AV Detection</div>
+            <div class="card-body">
+                <canvas id="edrDetectionChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+{% if edr_products %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">EDR/AV Products Detected</div>
+            <div class="card-body">
+                <canvas id="edrProductsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if all_tools %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Analysis Tools Detected</div>
+            <div class="card-body">
+                <canvas id="toolsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Detailed Tables -->
+<div class="accordion" id="detailsAccordion">
+    <!-- Top Countries -->
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#countriesCollapse">
+                Top Countries
+            </button>
+        </h2>
+        <div id="countriesCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="countriesTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Country</th>
+                            <th>Executions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for country, count in geo_stats.countries.items %}
+                        <tr>
+                            <td>{{ country }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Cities -->
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#citiesCollapse">
+                Top Cities
+            </button>
+        </h2>
+        <div id="citiesCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="citiesTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>Executions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for city, count in geo_stats.cities.items %}
+                        <tr>
+                            <td>{{ city }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EDR Products -->
+    {% if edr_products %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#edrCollapse">
+                EDR/AV Products
+            </button>
+        </h2>
+        <div id="edrCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="edrProductsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Detections</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product, count in edr_products.items %}
+                        <tr>
+                            <td>{{ product }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Tools Detected -->
+    {% if all_tools %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#toolsCollapse">
+                Analysis Tools
+            </button>
+        </h2>
+        <div id="toolsCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="toolsDetectedTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Detections</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tool, count in all_tools.items %}
+                        <tr>
+                            <td>{{ tool }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-TlbjKRKXbKvFNVR+JBHfl0o/BmqD0t8tFqNYFl7W8X8qYqYqYqYqYqYqYqYqYqYq" crossorigin="anonymous"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTables
+    $('#countriesTable, #citiesTable, #edrProductsTable, #toolsDetectedTable').DataTable({
+        pageLength: 10,
+        order: [[1, 'desc']],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_",
+            info: "Showing _START_ to _END_ of _TOTAL_"
+        }
+    });
+    
+    // Chart.js configuration
+    const chartColors = [
+        '#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545',
+        '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0',
+        '#6c757d', '#adb5bd', '#495057', '#343a40', '#212529'
+    ];
+    
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    };
+    
+    // Helper function
+    function dictToArrays(dict) {
+        return {
+            keys: Object.keys(dict),
+            values: Object.values(dict)
+        };
+    }
+    
+    // Load data
+    const geoStats = {{ geo_stats_json|safe }};
+    const osStats = {{ os_stats_json|safe }};
+    const edrProducts = {{ edr_products_json|safe }};
+    const allTools = {{ all_tools_json|safe }};
+    
+    // Countries Chart
+    if (geoStats.countries && Object.keys(geoStats.countries).length > 0) {
+        const data = dictToArrays(geoStats.countries);
+        new Chart(document.getElementById('countriesChart'), {
+            type: 'pie',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: chartColors
+                }]
+            },
+            options: chartOptions
+        });
+    }
+    
+    // OS Chart
+    if (osStats && Object.keys(osStats).length > 0) {
+        const data = dictToArrays(osStats);
+        new Chart(document.getElementById('osChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Executions',
+                    data: data.values,
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // VM Chart
+    new Chart(document.getElementById('vmChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Virtual Machine', 'Physical'],
+            datasets: [{
+                data: [{{ vm_count }}, {{ physical_count }}],
+                backgroundColor: ['#dc3545', '#198754']
+            }]
+        },
+        options: chartOptions
+    });
+    
+    // EDR Detection Chart
+    new Chart(document.getElementById('edrDetectionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['With EDR/AV', 'Without EDR/AV'],
+            datasets: [{
+                data: [{{ executions_with_edr }}, {{ executions_without_edr }}],
+                backgroundColor: ['#fd7e14', '#198754']
+            }]
+        },
+        options: chartOptions
+    });
+    
+    // EDR Products Chart
+    if (edrProducts && Object.keys(edrProducts).length > 0) {
+        const data = dictToArrays(edrProducts);
+        new Chart(document.getElementById('edrProductsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Detections',
+                    data: data.values,
+                    backgroundColor: '#fd7e14'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Tools Chart
+    if (allTools && Object.keys(allTools).length > 0) {
+        const data = dictToArrays(allTools);
+        new Chart(document.getElementById('toolsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Detections',
+                    data: data.values,
+                    backgroundColor: '#0dcaf0'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,278 @@
+{% load xss_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSS Payloads - Artefacto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-links {
+            margin-top: 20px;
+        }
+        
+        .nav-links a {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-right: 10px;
+            transition: all 0.3s;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-links a:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .filters {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .filters form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filters select {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .filters button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .filters button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .payloads-table {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: rgba(102, 126, 234, 0.2);
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-injected {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+        
+        .status-triggered {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .vector-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .payload-id {
+            font-family: 'Courier New', monospace;
+            color: #64b5f6;
+            font-size: 13px;
+        }
+        
+        .hits-count {
+            font-weight: 600;
+            color: #4caf50;
+        }
+        
+        .no-payloads {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .no-payloads h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 XSS Payloads</h1>
+            <p>Lista completa de payloads inyectados</p>
+            <div class="nav-links">
+                <a href="/">← Inicio</a>
+                <a href="/dashboard/">📊 Dashboard XSS</a>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <form method="get">
+                <label>Estado:</label>
+                <select name="status">
+                    <option value="">Todos</option>
+                    <option value="injected" {% if status_filter == 'injected' %}selected{% endif %}>Inyectados</option>
+                    <option value="triggered" {% if status_filter == 'triggered' %}selected{% endif %}>Triggerados</option>
+                </select>
+                
+                <label>Vector:</label>
+                <select name="vector">
+                    <option value="">Todos</option>
+                    <option value="hostname" {% if vector_filter == 'hostname' %}selected{% endif %}>Hostname</option>
+                    <option value="filename" {% if vector_filter == 'filename' %}selected{% endif %}>Filename</option>
+                    <option value="process" {% if vector_filter == 'process' %}selected{% endif %}>Process</option>
+                    <option value="registry" {% if vector_filter == 'registry' %}selected{% endif %}>Registry</option>
+                    <option value="window" {% if vector_filter == 'window' %}selected{% endif %}>Window</option>
+                    <option value="cmdline" {% if vector_filter == 'cmdline' %}selected{% endif %}>Command Line</option>
+                    <option value="dns" {% if vector_filter == 'dns' %}selected{% endif %}>🆕 DNS Queries</option>
+                    <option value="http" {% if vector_filter == 'http' %}selected{% endif %}>🆕 HTTP Requests</option>
+                    <option value="file-content" {% if vector_filter == 'file-content' %}selected{% endif %}>🆕 File Content</option>
+                    <option value="pe-metadata" {% if vector_filter == 'pe-metadata' %}selected{% endif %}>🆕 PE Metadata</option>
+                    <option value="environment" {% if vector_filter == 'environment' %}selected{% endif %}>🆕 Environment Vars</option>
+                </select>
+                
+                <button type="submit">Filtrar</button>
+                <a href="/payloads/" style="padding: 10px 25px; background: rgba(255,255,255,0.1); color: #e0e0e0; text-decoration: none; border-radius: 8px;">Limpiar</a>
+            </form>
+        </div>
+        
+        <div class="payloads-table">
+            {% if payloads %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Payload ID</th>
+                        <th>Tipo</th>
+                        <th>Vector</th>
+                        <th>Estado</th>
+                        <th>Hits</th>
+                        <th>Ejecución</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payload in payloads %}
+                    <tr>
+                        <td><span class="payload-id">{{ payload.payload_id }}</span></td>
+                        <td>{{ payload.payload_type }}</td>
+                        <td><span class="vector-badge">{{ payload.vector }}</span></td>
+                        <td>
+                            <span class="status-badge status-{{ payload.status }}">
+                                {% if payload.status == 'triggered' %}✓{% else %}⏳{% endif %}
+                                {{ payload.status|upper }}
+                            </span>
+                        </td>
+                        <td><span class="hits-count">{{ payload.hits.count }}</span></td>
+                        <td>
+                            <a href="/execution/{{ payload.execution.guid }}/" style="color: #64b5f6; text-decoration: none;">
+                                {{ payload.execution.hostname|truncate_hostname }}
+                            </a>
+                        </td>
+                        <td>{{ payload.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-payloads">
+                <h2>No hay payloads</h2>
+                <p>Ejecuta el agente con XSS_AUDIT=true para generar payloads</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

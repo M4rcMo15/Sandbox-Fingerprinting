@@ -1,0 +1,499 @@
+{% extends 'collector/base.html' %}
+{% load xss_filters %}
+
+{% block title %}XSS Audit Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>🎯 XSS Sandbox Audit Dashboard</h1>
+    <p class="subtitle">Monitoreo de vulnerabilidades XSS en sandboxes de análisis de malware</p>
+
+    <!-- Estadísticas Principales -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_payloads }}</div>
+                <div class="stat-label">Payloads Inyectados</div>
+            </div>
+        </div>
+
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ triggered_payloads }}</div>
+                <div class="stat-label">XSS Triggerados</div>
+            </div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_hits }}</div>
+                <div class="stat-label">Total Hits</div>
+            </div>
+        </div>
+
+        <div class="stat-card danger">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ vulnerable_sandboxes }}</div>
+                <div class="stat-label">Sandboxes Vulnerables</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasa de Éxito -->
+    <div class="success-rate">
+        <h3>Tasa de Éxito: {{ success_rate }}%</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ success_rate }}%"></div>
+        </div>
+    </div>
+
+    <!-- Actividad Reciente -->
+    <div class="activity-section">
+        <h3>📈 Actividad Reciente</h3>
+        <div class="activity-stats">
+            <span>Últimas 24h: <strong>{{ hits_24h }}</strong> hits</span>
+            <span>Última semana: <strong>{{ hits_week }}</strong> hits</span>
+        </div>
+    </div>
+
+    <!-- Últimos Hits -->
+    <div class="section">
+        <h2>🔥 Últimos XSS Triggerados</h2>
+        {% if recent_hits %}
+        <div class="hits-list">
+            {% for hit in recent_hits %}
+            <div class="hit-card">
+                <div class="hit-header">
+                    <span class="hit-time">{{ hit.triggered_at|date:"Y-m-d H:i:s" }}</span>
+                    <span class="hit-vector badge-{{ hit.payload.vector }}">{{ hit.payload.vector }}</span>
+                </div>
+                <div class="hit-body">
+                    <div class="hit-info">
+                        <strong>Payload ID:</strong> {{ hit.payload.payload_id|slice:":16" }}...
+                    </div>
+                    <div class="hit-info">
+                        <strong>Type:</strong> {{ hit.payload.payload_type }}
+                    </div>
+                    <div class="hit-info">
+                        <strong>Source IP:</strong> {{ hit.source_ip }}
+                    </div>
+                    <div class="hit-info">
+                        <strong>Execution:</strong> 
+                        <a href="{% url 'execution_detail' hit.payload.execution.guid %}">
+                            {{ hit.payload.execution.hostname }}
+                        </a>
+                    </div>
+                </div>
+                <div class="hit-footer">
+                    <a href="{% url 'xss_audit:hit_detail' hit.id %}" class="btn-small">Ver Detalles</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-data">No hay hits registrados aún. Los payloads están esperando ser triggerados.</p>
+        {% endif %}
+    </div>
+
+    <!-- Vectores Más Exitosos -->
+    <div class="section">
+        <h2>📊 Vectores Más Exitosos</h2>
+        {% if vector_stats %}
+        <div class="vector-stats">
+            {% for stat in vector_stats %}
+            <div class="vector-bar">
+                <div class="vector-label">{{ stat.vector }}</div>
+                <div class="vector-progress">
+                    <div class="vector-fill" style="width: {{ stat.width }}%"></div>
+                    <span class="vector-count">{{ stat.count }} hits</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-data">No hay datos de vectores aún.</p>
+        {% endif %}
+    </div>
+
+    <!-- Sandboxes Vulnerables -->
+    <div class="section">
+        <h2>🎯 Sandboxes Identificados</h2>
+        {% if sandboxes %}
+        <div class="sandboxes-grid">
+            {% for sandbox in sandboxes %}
+            <div class="sandbox-card">
+                <div class="sandbox-header">
+                    <h3>{{ sandbox.sandbox_name }}</h3>
+                    <span class="sandbox-hits">{{ sandbox.hit_count }} hits</span>
+                </div>
+                <div class="sandbox-body">
+                    <div class="sandbox-info">
+                        <strong>Vectores vulnerables:</strong>
+                        <div class="sandbox-vectors">
+                            {% for vector in sandbox.vulnerable_vectors %}
+                            <span class="badge-{{ vector }}">{{ vector }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="sandbox-info">
+                        <strong>Primera detección:</strong> {{ sandbox.first_detected|date:"Y-m-d H:i" }}
+                    </div>
+                    <div class="sandbox-info">
+                        <strong>Última detección:</strong> {{ sandbox.last_detected|date:"Y-m-d H:i" }}
+                    </div>
+                </div>
+                <div class="sandbox-footer">
+                    <a href="{% url 'xss_audit:sandbox_detail' sandbox.id %}" class="btn-small">Ver Detalles</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-data">No se han identificado sandboxes vulnerables aún.</p>
+        {% endif %}
+    </div>
+
+    <!-- Enlaces Rápidos -->
+    <div class="quick-links">
+        <a href="{% url 'xss_audit:payloads_list' %}" class="btn">Ver Todos los Payloads</a>
+        <a href="{% url 'index' %}" class="btn btn-secondary">Volver a Ejecuciones</a>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    color: #58a6ff;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #8b949e;
+    margin-bottom: 30px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.stat-card.success { border-left: 3px solid #3fb950; }
+.stat-card.warning { border-left: 3px solid #d29922; }
+.stat-card.danger { border-left: 3px solid #f85149; }
+
+.stat-icon {
+    font-size: 2.5em;
+}
+
+.stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #58a6ff;
+}
+
+.stat-label {
+    color: #8b949e;
+    font-size: 0.9em;
+}
+
+.success-rate {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.success-rate h3 {
+    margin-bottom: 15px;
+    color: #58a6ff;
+}
+
+.progress-bar {
+    background: #21262d;
+    height: 30px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #3fb950, #58a6ff);
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.activity-section {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.activity-stats {
+    display: flex;
+    gap: 30px;
+    color: #8b949e;
+}
+
+.activity-stats strong {
+    color: #58a6ff;
+}
+
+.section {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.section h2 {
+    color: #58a6ff;
+    margin-bottom: 20px;
+}
+
+.hits-list {
+    display: grid;
+    gap: 15px;
+}
+
+.hit-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.hit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.hit-time {
+    color: #8b949e;
+    font-size: 0.9em;
+}
+
+.hit-vector {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.badge-hostname { background: #1f6feb; color: white; }
+.badge-filename { background: #3fb950; color: white; }
+.badge-process { background: #d29922; color: white; }
+.badge-registry { background: #f85149; color: white; }
+.badge-window { background: #a371f7; color: white; }
+.badge-cmdline { background: #ff7b72; color: white; }
+.badge-dns { background: #0969da; color: white; }
+.badge-http { background: #1a7f37; color: white; }
+.badge-file-content { background: #bf3989; color: white; }
+.badge-pe-metadata { background: #bc4c00; color: white; }
+.badge-environment { background: #8250df; color: white; }
+
+.hit-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.hit-info {
+    color: #c9d1d9;
+    font-size: 0.9em;
+}
+
+.hit-info strong {
+    color: #8b949e;
+}
+
+.hit-footer {
+    text-align: right;
+}
+
+.btn-small {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #21262d;
+    color: #58a6ff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    border: 1px solid #30363d;
+}
+
+.btn-small:hover {
+    background: #30363d;
+}
+
+.vector-stats {
+    display: grid;
+    gap: 15px;
+}
+
+.vector-bar {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.vector-label {
+    color: #c9d1d9;
+    font-weight: bold;
+}
+
+.vector-progress {
+    background: #21262d;
+    height: 30px;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.vector-fill {
+    background: linear-gradient(90deg, #1f6feb, #58a6ff);
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.vector-count {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #c9d1d9;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.sandboxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.sandbox-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.sandbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #30363d;
+}
+
+.sandbox-header h3 {
+    color: #58a6ff;
+    margin: 0;
+}
+
+.sandbox-hits {
+    background: #f85149;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.sandbox-body {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.sandbox-info {
+    color: #c9d1d9;
+    font-size: 0.9em;
+}
+
+.sandbox-info strong {
+    color: #8b949e;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.sandbox-vectors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.sandbox-footer {
+    text-align: right;
+}
+
+.no-data {
+    color: #8b949e;
+    text-align: center;
+    padding: 40px;
+    font-style: italic;
+}
+
+.quick-links {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    background: #238636;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: bold;
+    border: 1px solid #2ea043;
+}
+
+.btn:hover {
+    background: #2ea043;
+}
+
+.btn-secondary {
+    background: #21262d;
+    color: #58a6ff;
+    border: 1px solid #30363d;
+}
+
+.btn-secondary:hover {
+    background: #30363d;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,23 @@
+[Unit]
+Description=Artefacto Visualizer - Django Application
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/artefacto-visualizer
+Environment="PATH=/opt/artefacto-visualizer/venv/bin"
+EnvironmentFile=/opt/artefacto-visualizer/.env
+ExecStart=/opt/artefacto-visualizer/venv/bin/gunicorn \
+    --config /opt/artefacto-visualizer/deploy/gunicorn_config.py \
+    visualizer.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

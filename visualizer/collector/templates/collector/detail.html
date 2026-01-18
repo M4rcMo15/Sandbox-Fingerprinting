@@ -1,0 +1,747 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}{{ execution.hostname }} - Artefacto Visualizer{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'index' %}">Executions</a></li>
+        <li class="breadcrumb-item active">{{ execution.hostname }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ execution.hostname }}</h1>
+    <p class="page-subtitle">
+        Executed: {{ execution.timestamp|date:"Y-m-d H:i:s" }} | 
+        Received: {{ execution.received_at|timesince }} ago
+    </p>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="summary-card">
+            <div class="summary-card-label">Location</div>
+            <div class="summary-card-value">
+                {% if execution.geo_location %}
+                    {% if execution.geo_location.country_code %}
+                        <img src="https://flagcdn.com/24x18/{{ execution.geo_location.country_code|lower }}.png" 
+                             alt="{{ execution.geo_location.country }}" 
+                             style="margin-right: 8px; vertical-align: middle;">
+                    {% endif %}
+                    {{ execution.geo_location.country_code|default:"??" }}
+                {% else %}
+                    Unknown
+                {% endif %}
+            </div>
+            <div class="summary-card-subtitle">
+                {% if execution.geo_location %}
+                    {{ execution.geo_location.city }}, {{ execution.geo_location.country }}
+                {% else %}
+                    No geolocation data
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="summary-card">
+            <div class="summary-card-label">System</div>
+            <div class="summary-card-value">
+                {% if execution.system_info %}
+                    {{ execution.system_info.os|truncatechars:15 }}
+                {% else %}
+                    Unknown
+                {% endif %}
+            </div>
+            <div class="summary-card-subtitle">
+                {% if execution.system_info %}
+                    {{ execution.system_info.architecture }} | {{ execution.system_info.cpu_count }} CPUs
+                {% else %}
+                    No system data
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="summary-card">
+            <div class="summary-card-label">Sandbox Score</div>
+            <div class="summary-card-value">
+                {% if execution.sandbox_info %}
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">{{ execution.sandbox_info.score }}%</span>
+                        <div class="progress flex-grow-1" style="height: 10px;">
+                            <div class="progress-bar {% if execution.sandbox_info.score > 70 %}bg-danger{% elif execution.sandbox_info.score > 30 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ execution.sandbox_info.score }}%">
+                            </div>
+                        </div>
+                    </div>
+                    {% if execution.sandbox_info.is_vm %}
+                        <small class="text-danger fw-bold">High Probability</small>
+                    {% else %}
+                        <small class="text-success">Low Probability</small>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+            </div>
+            <div class="summary-card-subtitle">
+                {% if execution.sandbox_info and execution.sandbox_info.is_vm %}
+                    {{ execution.sandbox_info.vm_indicators|length }} indicators found
+                {% else %}
+                    No VM indicators
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="summary-card">
+            <div class="summary-card-label">Security</div>
+            <div class="summary-card-value">
+                {% if execution.edr_info %}
+                    {% with edr_count=execution.edr_info.detected_products.count %}
+                        {% if edr_count > 0 %}
+                            <span class="badge bg-warning text-dark">{{ edr_count }} EDR</span>
+                        {% else %}
+                            <span class="badge bg-success">Clean</span>
+                        {% endif %}
+                    {% endwith %}
+                {% else %}
+                    <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+            </div>
+            <div class="summary-card-subtitle">
+                {% if execution.tools_info %}
+                    {% with total_tools=execution.tools_info.reversing_tools|length %}
+                        {% with total_tools=total_tools|add:execution.tools_info.debugging_tools|length %}
+                            {{ total_tools }} analysis tools
+                        {% endwith %}
+                    {% endwith %}
+                {% else %}
+                    No tools detected
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" id="detailTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button">
+            System
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="detection-tab" data-bs-toggle="tab" data-bs-target="#detection" type="button">
+            Detection
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="network-tab" data-bs-toggle="tab" data-bs-target="#network" type="button">
+            Network
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button">
+            Security
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw" type="button">
+            Raw Data
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="detailTabsContent">
+    <!-- System Tab -->
+    <div class="tab-pane fade show active" id="system" role="tabpanel">
+        {% if execution.system_info %}
+        <div class="card mb-3">
+            <div class="card-header">System Information</div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Screenshot & OCR Section -->
+                    {% if execution.system_info.screenshot_base64 %}
+                    <div class="col-12 mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div>
+                                    <h6 class="mb-1"><i class="bi bi-camera"></i> Screenshot Available</h6>
+                                    <small class="text-muted">Resolution: {{ execution.system_info.screen_resolution|default:"Unknown" }}</small>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#screenshotModal">
+                                    View Screenshot & OCR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Clipboard Section -->
+                    {% if execution.system_info.clipboard_preview %}
+                    <div class="col-12 mb-4">
+                        <div class="alert alert-secondary">
+                            <h6 class="alert-heading"><i class="bi bi-clipboard"></i> Clipboard Content Detected</h6>
+                            <hr>
+                            <pre class="mb-0" style="white-space: pre-wrap; max-height: 100px; overflow-y: auto;">{{ execution.system_info.clipboard_preview }}</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Operating System</th>
+                                <td>{{ execution.system_info.os }}</td>
+                            </tr>
+                            <tr>
+                                <th>Architecture</th>
+                                <td>{{ execution.system_info.architecture }}</td>
+                            </tr>
+                            <tr>
+                                <th>CPU Count</th>
+                                <td>{{ execution.system_info.cpu_count }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total RAM</th>
+                                <td>{{ execution.system_info.total_ram_mb }} MB</td>
+                            </tr>
+                            <tr>
+                                <th>Total Disk</th>
+                                <td>{{ execution.system_info.total_disk_bytes|filesizeformat }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Language</th>
+                                <td>{{ execution.system_info.language|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Timezone</th>
+                                <td>{{ execution.system_info.timezone|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Uptime</th>
+                                <td>{{ execution.system_info.uptime_seconds }} seconds</td>
+                            </tr>
+                            <tr>
+                                <th>BIOS</th>
+                                <td>{{ execution.system_info.bios|truncatechars:40 }}</td>
+                            </tr>
+                            <tr>
+                                <th>Mouse Position</th>
+                                <td>X: {{ execution.system_info.mouse_position_x }}, Y: {{ execution.system_info.mouse_position_y }}</td>
+                            </tr>
+                            <tr>
+                                <th>Mouse History</th>
+                                <td>{{ execution.system_info.mouse_history|length }} samples</td>
+                            </tr>
+                            <tr>
+                                <th>MAC OUI</th>
+                                <td>{{ execution.system_info.mac_oui|default:"Unknown" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">Processes ({{ execution.system_info.processes.count }})</div>
+            <div class="card-body">
+                <table id="processesTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Name</th>
+                            <th>Owner</th>
+                            <th>Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for process in execution.system_info.processes.all %}
+                        <tr>
+                            <td>{{ process.pid }}</td>
+                            <td><strong>{{ process.name }}</strong></td>
+                            <td>{{ process.owner }}</td>
+                            <td><code>{{ process.path|truncatechars:60 }}</code></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">Installed Applications ({{ execution.system_info.installed_apps|length }})</div>
+            <div class="card-body">
+                <table id="appsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in execution.system_info.installed_apps %}
+                        <tr>
+                            <td>{{ app }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-3">No system information available</div>
+        {% endif %}
+    </div>
+    
+    <!-- Detection Tab -->
+    <div class="tab-pane fade" id="detection" role="tabpanel">
+        {% if execution.sandbox_info %}
+        <div class="card mb-3">
+            <div class="card-header">VM/Sandbox Detection</div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Is VM:</strong>
+                        {% if execution.sandbox_info.is_vm %}
+                            <span class="badge bg-danger">Yes</span>
+                        {% else %}
+                            <span class="badge bg-success">No</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>CPU Temperature:</strong> 
+                        {% if execution.sandbox_info.cpu_temperature is not None %}
+                            {{ execution.sandbox_info.cpu_temperature }}°C
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Window Count:</strong> {{ execution.sandbox_info.window_count }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Debug Privilege:</strong> {{ execution.sandbox_info.has_debug_privilege|yesno:"Yes,No" }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Timing Discrepancy:</strong> {{ execution.sandbox_info.timing_discrepancy|floatformat:4 }}s
+                    </div>
+                    <div class="col-md-3">
+                        <strong>CPUID Hypervisor:</strong> {{ execution.sandbox_info.cpuid_hypervisor|yesno:"Yes,No" }}
+                    </div>
+                </div>
+                
+                <h6>VM Indicators ({{ execution.sandbox_info.vm_indicators|length }})</h6>
+                <table id="vmIndicatorsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Indicator</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for indicator in execution.sandbox_info.vm_indicators %}
+                        <tr>
+                            <td>{{ indicator }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td class="text-muted">No VM indicators found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if execution.edr_info %}
+        <div class="card mb-3">
+            <div class="card-header">EDR/AV Detection</div>
+            <div class="card-body">
+                <table id="edrTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Detected</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in execution.edr_info.detected_products.all %}
+                        <tr>
+                            <td><strong>{{ product.name }}</strong></td>
+                            <td><span class="badge bg-warning text-dark">{{ product.type }}</span></td>
+                            <td>
+                                {% if product.detected %}
+                                    <span class="badge bg-danger">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-success">No</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ product.method }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-muted">No EDR/AV products detected</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if execution.tools_info %}
+        <div class="card mb-3">
+            <div class="card-header">Analysis Tools Detected</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Reversing Tools</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for tool in execution.tools_info.reversing_tools %}
+                            <li class="list-group-item">{{ tool }}</li>
+                            {% empty %}
+                            <li class="list-group-item text-muted">None detected</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Debugging Tools</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for tool in execution.tools_info.debugging_tools %}
+                            <li class="list-group-item">{{ tool }}</li>
+                            {% empty %}
+                            <li class="list-group-item text-muted">None detected</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6>Monitoring Tools</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for tool in execution.tools_info.monitoring_tools %}
+                            <li class="list-group-item">{{ tool }}</li>
+                            {% empty %}
+                            <li class="list-group-item text-muted">None detected</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Virtualization Tools</h6>
+                        <ul class="list-group list-group-flush">
+                            {% for tool in execution.tools_info.virtualization_tools %}
+                            <li class="list-group-item">{{ tool }}</li>
+                            {% empty %}
+                            <li class="list-group-item text-muted">None detected</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Network Tab -->
+    <div class="tab-pane fade" id="network" role="tabpanel">
+        {% if execution.system_info %}
+        <div class="card mb-3">
+            <div class="card-header">Network Connections ({{ execution.system_info.network_connections.count }})</div>
+            <div class="card-body">
+                <table id="connectionsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Protocol</th>
+                            <th>Local Address</th>
+                            <th>Remote Address</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for conn in execution.system_info.network_connections.all %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ conn.protocol }}</span></td>
+                            <td><code>{{ conn.local_addr }}</code></td>
+                            <td><code>{{ conn.remote_addr }}</code></td>
+                            <td>{{ conn.state }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        {% if execution.geo_location %}
+        <div class="card mb-3">
+            <div class="card-header">Geolocation</div>
+            <div class="card-body">
+                <div class="row">
+                    {% if execution.geo_location.is_datacenter %}
+                    <div class="col-12 mb-3">
+                        <div class="alert alert-danger py-2 mb-0">
+                            <strong>⚠️ Datacenter IP Detected:</strong> This IP belongs to a hosting provider ({{ execution.geo_location.isp }}), likely a Sandbox/VPN.
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Country</th>
+                                <td>
+                                    {% if execution.geo_location.country_code %}
+                                        <img src="https://flagcdn.com/16x12/{{ execution.geo_location.country_code|lower }}.png" 
+                                             alt="{{ execution.geo_location.country }}" 
+                                             style="margin-right: 6px; vertical-align: middle;">
+                                    {% endif %}
+                                    {{ execution.geo_location.country }} ({{ execution.geo_location.country_code }})
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Region</th>
+                                <td>{{ execution.geo_location.region }}</td>
+                            </tr>
+                            <tr>
+                                <th>City</th>
+                                <td>{{ execution.geo_location.city }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="40%">Coordinates</th>
+                                <td>{{ execution.geo_location.latitude }}, {{ execution.geo_location.longitude }}</td>
+                            </tr>
+                            <tr>
+                                <th>ISP</th>
+                                <td>{{ execution.geo_location.isp }}</td>
+                            </tr>
+                            <tr>
+                                <th>Organization</th>
+                                <td>{{ execution.geo_location.organization }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info mt-3">No network information available</div>
+        {% endif %}
+    </div>
+    
+    <!-- Security Tab -->
+    <div class="tab-pane fade" id="security" role="tabpanel">
+        {% if execution.hook_info %}
+        <div class="card mb-3">
+            <div class="card-header">Hooked Functions ({{ execution.hook_info.hooked_functions.count }})</div>
+            <div class="card-body">
+                <table id="hooksTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>Function</th>
+                            <th>Status</th>
+                            <th>First Bytes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for func in execution.hook_info.hooked_functions.all %}
+                        <tr>
+                            <td>{{ func.module }}</td>
+                            <td><code>{{ func.function }}</code></td>
+                            <td>
+                                {% if func.is_hooked %}
+                                    <span class="badge bg-danger">HOOKED</span>
+                                {% else %}
+                                    <span class="badge bg-success">OK</span>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ func.first_bytes }}</code></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        {% if execution.hook_info.suspicious_dlls %}
+        <div class="card mb-3">
+            <div class="card-header">Suspicious DLLs ({{ execution.hook_info.suspicious_dlls|length }})</div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for dll in execution.hook_info.suspicious_dlls %}
+                    <li class="list-group-item">{{ dll }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info mt-3">No security information available</div>
+        {% endif %}
+        
+        {% if execution.crawler_info %}
+        <div class="card mb-3">
+            <div class="card-header">File Crawler Results</div>
+            <div class="card-body">
+                <p><strong>Total Files Found:</strong> {{ execution.crawler_info.total_files }}</p>
+                
+                <h6>Scanned Paths</h6>
+                <ul class="list-group mb-3">
+                    {% for path in execution.crawler_info.scanned_paths %}
+                    <li class="list-group-item"><code>{{ path }}</code></li>
+                    {% endfor %}
+                </ul>
+                
+                <h6>Found Files</h6>
+                <ul class="list-group">
+                    {% for file in execution.crawler_info.found_files %}
+                    <li class="list-group-item"><code>{{ file }}</code></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Raw Data Tab -->
+    <div class="tab-pane fade" id="raw" role="tabpanel">
+        <div class="card mt-3">
+            <div class="card-header">Execution Metadata</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="30%">GUID</th>
+                        <td><code>{{ execution.guid }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>Timestamp</th>
+                        <td>{{ execution.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Received At</th>
+                        <td>{{ execution.received_at|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Hostname</th>
+                        <td>{{ execution.hostname }}</td>
+                    </tr>
+                    <tr>
+                        <th>Public IP</th>
+                        <td>
+                            <code>{{ execution.public_ip|default:"N/A" }}</code>
+                            {% if execution.public_ip %}
+                                <a href="https://www.shodan.io/host/{{ execution.public_ip }}" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   class="btn btn-sm btn-outline-danger ms-2" 
+                                   title="Search in Shodan">
+                                    <i class="bi bi-search"></i> Shodan
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Binary Size</th>
+                        <td>{{ execution.binary_size_bytes|filesizeformat }} ({{ execution.binary_size_bytes }} bytes)</td>
+                    </tr>
+                    <tr>
+                        <th>Binary Hash (SHA256)</th>
+                        <td>
+                            <code>{{ execution.binary_hash|default:"N/A" }}</code>
+                            {% if execution.binary_hash %}
+                                <a href="https://www.virustotal.com/gui/search/{{ execution.binary_hash }}" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   class="btn btn-sm btn-outline-primary ms-2" 
+                                   title="Search in VirusTotal">
+                                    <i class="bi bi-search"></i> VT
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Target Sandbox</th>
+                        <td>
+                            {% if execution.target_sandbox %}
+                                <span class="badge bg-info text-dark">{{ execution.target_sandbox }}</span>
+                            {% else %}
+                                <span class="text-muted">Not specified</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'index' %}" class="btn btn-secondary">← Back to Executions</a>
+</div>
+
+<!-- Screenshot Modal -->
+{% if execution.system_info.screenshot_base64 %}
+<div class="modal fade" id="screenshotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Desktop Screenshot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="data:image/png;base64,{{ execution.system_info.screenshot_base64 }}" class="img-fluid border mb-3" alt="Screenshot">
+                
+                <div class="text-start">
+                    <h6>OCR Extracted Text:</h6>
+                    <div class="p-3 bg-light border rounded" style="max-height: 200px; overflow-y: auto;">
+                        {% if execution.system_info.ocr_extracted_text %}
+                            <pre class="mb-0" style="white-space: pre-wrap;">{{ execution.system_info.ocr_extracted_text }}</pre>
+                        {% else %}
+                            <span class="text-muted fst-italic">No text extracted or OCR failed.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize all DataTables
+    $('#processesTable, #appsTable, #vmIndicatorsTable, #edrTable, #connectionsTable, #hooksTable').DataTable({
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_",
+            info: "Showing _START_ to _END_ of _TOTAL_",
+            infoEmpty: "No entries",
+            zeroRecords: "No matching records found"
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'collector/base.html' %}
+
+{% block title %}Executions - Artefacto Visualizer{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active">Executions</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Executions</h1>
+    <p class="page-subtitle">Agent execution history and analysis results</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table id="executionsTable" class="table table-hover" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th style="width: 25%;">Hostname</th>
+                    <th style="width: 10%;">Target</th>
+                    <th style="width: 12%;">Location</th>
+                    <th style="width: 12%;">IP Address</th>
+                    <th>Score</th>
+                    <th style="width: 10%;">EDR/AV</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for execution in executions %}
+                <tr class="execution-row">
+                    <td data-order="{{ execution.received_at|date:'U' }}">
+                        <span class="text-muted" title="{{ execution.timestamp|date:'Y-m-d H:i:s' }}">
+                            {{ execution.received_at|timesince }} ago
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ execution.hostname }}</strong>
+                        <br>
+                        <small class="text-muted">{{ execution.guid }}</small>
+                        {% if execution.binary_hash %}
+                            <br>
+                            <small class="text-muted" title="{{ execution.binary_hash }}">
+                                <i class="bi bi-hash"></i> {{ execution.binary_hash|slice:":12" }}...
+                            </small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.target_sandbox %}
+                            <span class="badge bg-info text-dark">{{ execution.target_sandbox }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.geo_location %}
+                            {% if execution.geo_location.country_code %}
+                                <img src="https://flagcdn.com/16x12/{{ execution.geo_location.country_code|lower }}.png" 
+                                     alt="{{ execution.geo_location.country }}" 
+                                     style="margin-right: 6px; vertical-align: middle;">
+                            {% endif %}
+                            {{ execution.geo_location.city|default:"Unknown" }}, {{ execution.geo_location.country|default:"Unknown" }}
+                        {% else %}
+                            <span class="text-muted">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.public_ip %}
+                            <code>{{ execution.public_ip }}</code>
+                            {% if execution.geo_location %}
+                                <br><small class="text-muted">{{ execution.geo_location.isp|truncatechars:30 }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.sandbox_info %}
+                            {% with score=execution.sandbox_info.score %}
+                                {% if score > 70 %}
+                                    <span class="badge bg-danger">{{ score }}% (VM)</span>
+                                {% elif score > 30 %}
+                                    <span class="badge bg-warning text-dark">{{ score }}% (Susp)</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ score }}% (Clean)</span>
+                                {% endif %}
+                            {% endwith %}
+                            <br><small class="text-muted">{{ execution.sandbox_info.vm_indicators|length }} indicators</small>
+                        {% else %}
+                            <span class="badge bg-secondary">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.edr_info %}
+                            {% with edr_count=execution.edr_info.detected_products.count %}
+                                {% if edr_count > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ edr_count }} detected</span>
+                                    <br>
+                                    <small class="text-muted">
+                                        {% for product in execution.edr_info.detected_products.all|slice:":2" %}
+                                            {{ product.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                        {% if edr_count > 2 %}...{% endif %}
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-success">None</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if execution.binary_size_bytes > 0 %}
+                            {{ execution.binary_size_mb }} MB
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'execution_detail' execution.guid %}" class="btn btn-sm btn-primary">
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#executionsTable').DataTable({
+        order: [[0, 'desc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>' +
+             '<"row"<"col-sm-12"B>>',
+        buttons: [
+            {
+                extend: 'csv',
+                text: 'Export CSV',
+                className: 'btn btn-sm btn-secondary mt-2'
+            },
+            {
+                extend: 'copy',
+                text: 'Copy',
+                className: 'btn btn-sm btn-secondary mt-2'
+            }
+        ],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ executions",
+            infoEmpty: "No executions available",
+            infoFiltered: "(filtered from _MAX_ total executions)",
+            zeroRecords: "No matching executions found",
+            emptyTable: "No executions received yet"
+        },
+        columnDefs: [
+            { orderable: false, targets: [8] }
+        ]
+    });
+});
+</script>
+{% endblock %}
