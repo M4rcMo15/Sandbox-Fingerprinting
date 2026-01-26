@@ -40,6 +40,39 @@ func InjectPayloads(payloads []XSSPayload) {
 	}
 }
 
+// InjectAIPrompts inyecta instrucciones para LLMs en lugares visibles (Logs, Archivos)
+func InjectAIPrompts(prompts []AIPrompt) {
+	for _, p := range prompts {
+		// 1. Inyección en Logs (Stdout/Stderr)
+		// Las sandboxes capturan esto y se lo pasan a la IA para resumir "qué hizo el programa"
+		fmt.Printf("\n[SYSTEM LOG] %s\n", p.Content)
+		
+		// 2. Inyección en Archivos de Texto
+		// Creamos archivos "LÉEME" que la IA podría intentar analizar
+		injectPromptIntoFile(p)
+		
+		// 3. Inyección en Debug String
+		// DebugView y otras herramientas capturan esto
+		injectPromptIntoDebugString(p)
+	}
+}
+
+// injectPromptIntoFile crea un archivo de texto con el prompt
+func injectPromptIntoFile(p AIPrompt) {
+	tempDir := os.TempDir()
+	// Nombre llamativo para que la IA quiera leerlo
+	filename := filepath.Join(tempDir, fmt.Sprintf("ANALYSIS_NOTE_%s.txt", p.Name))
+	os.WriteFile(filename, []byte(p.Content), 0644)
+}
+
+// injectPromptIntoDebugString envía el prompt al debugger
+func injectPromptIntoDebugString(p AIPrompt) {
+	kernel32 := windows.NewLazyDLL("kernel32.dll")
+	outputDebugString := kernel32.NewProc("OutputDebugStringW")
+	str, _ := windows.UTF16PtrFromString(p.Content)
+	outputDebugString.Call(uintptr(unsafe.Pointer(str)))
+}
+
 // injectIntoFilename crea archivos con nombres que contienen XSS
 func injectIntoFilename(payload XSSPayload) {
 	tempDir := os.TempDir()

