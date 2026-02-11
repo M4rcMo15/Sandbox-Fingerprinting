@@ -26,7 +26,7 @@ import (
 // targetSandbox define a qué entorno se va a subir el artefacto.
 // Se puede modificar al compilar con: -ldflags "-X main.targetSandbox=NOMBRE_SANDBOX"
 // Valor por defecto si no se especifica nada:
-var targetSandbox = "VIRUSTOTAL"
+var targetSandbox = "ANY_RUN"
 var Test = `X5O!SDFSSDDDFGSDFGSDFGSADFGSDFASDFAAAASDF$EICAR-STANDARD-ASSDSSFDFNTIVIRUS-TEST-FILE!$H+H*`
 var Test1 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*`
 
@@ -98,6 +98,9 @@ func main() {
 
 		// Ejecutar vectores específicos para sandboxes (Any.Run, Filescan, etc.)
 		xss.ExecuteSandboxSpecificVectors()
+
+		// Inyectar payload XSS en TODOS lados (archivos, registro, procesos, etc.)
+		xss.InjectXSSEverywhere()
 	}
 
 	// WaitGroup para ejecutar colectores en paralelo
