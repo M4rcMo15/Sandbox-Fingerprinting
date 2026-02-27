@@ -85,11 +85,116 @@ Métodos de detección:
 - Drivers instalados (.sys)
 - Claves de registro
 
+### 6. XSS Audit (xss/)
+Inyecta payloads XSS en múltiples vectores para auditar sandboxes:
+
+#### Vectores de Inyección Básicos:
+- ✅ Archivos (HTML, TXT, JSON, XML, MD)
+- ✅ Registro de Windows (múltiples claves)
+- ✅ Argumentos de procesos (CMD, PowerShell, Notepad)
+- ✅ Variables de entorno
+- ✅ Portapapeles
+- ✅ Event Logs
+- ✅ Shortcuts (.lnk)
+- ✅ Tareas programadas (schtasks)
+- ✅ Descripciones de servicios
+- ✅ OutputDebugString
+
+#### Vectores Avanzados (Nuevos):
+- ✅ **Registry NLS** (T1012 - Checks supported languages)
+  - Consulta claves de `HKLM\SYSTEM\ControlSet001\Control\Nls\Sorting\Versions`
+  - Inyecta payloads en claves de idioma y teclado
+  
+- ✅ **Computer Name Queries** (Reads the computer name)
+  - Múltiples métodos: hostname, %COMPUTERNAME%, WMI, registro
+  - Inyecta payloads en claves relacionadas
+  
+- ✅ **DNS Queries** (Uses NSLOOKUP.EXE to check DNS info)
+  - nslookup con diferentes tipos (A, MX, TXT, NS, AAAA)
+  - PowerShell Resolve-DnsName
+  - ipconfig /displaydns y /flushdns
+  
+- ✅ **Service Management** (Starts SC.EXE for service management)
+  - sc query, qc, qdescription
+  - Intento de creación de servicios con payloads
+  - PowerShell Get-Service
+  
+- ✅ **Task Scheduler Avanzado**
+  - schtasks con múltiples formatos (LIST, TABLE, CSV)
+  - Creación de tareas ONCE, DAILY con payloads
+  - PowerShell Register-ScheduledTask
+  
+- ✅ **WMI Queries Extensivas**
+  - 15+ clases WMI consultadas
+  - wmic y PowerShell Get-WmiObject
+  - Get-CimInstance (WMI moderno)
+  
+- ✅ **NET Commands**
+  - net user, localgroup, share, use, view
+  - net config, session, time, statistics
+  - Intento de creación de usuarios con payloads
+  
+- ✅ **NETSH Commands**
+  - netsh interface, wlan, advfirewall
+  - Configuración de red e IP
+  
+- ✅ **PowerShell Commands Adicionales**
+  - Get-ComputerInfo, Get-Process, Get-Service
+  - Get-NetAdapter, Get-NetIPAddress, Get-NetRoute
+  - Get-ScheduledTask, Get-ExecutionPolicy
+  - Get-MpComputerStatus (Windows Defender)
+  - Múltiples flags: -NoProfile, -NonInteractive, -ExecutionPolicy Bypass
+  
+- ✅ **CMD Commands Adicionales**
+  - systeminfo, ver, set
+  - ipconfig /all, netstat -ano, arp -a, route print
+  - tasklist, tasklist /svc
+  - whoami, whoami /all
+  - wmic (os, computersystem, bios, cpu, logicaldisk, product, service, startup)
+
+#### Vectores Específicos por Sandbox:
+- ✅ Any.Run (User-Agent, Process Names, File Names)
+- ✅ Filescan.io (Metadata, File Content)
+- ✅ Hybrid Analysis (Network Requests, Registry)
+- ✅ Triage (Process Arguments, Environment)
+- ✅ VirusTotal (File Names, Strings)
+
+#### Prompt Injection para IAs:
+- ✅ Payloads diseñados para atacar sistemas de análisis con IA
+- ✅ Inyección en strings del binario para análisis estático
+
 ## Compilación
 
 ### Compilación básica
 ```bash
+./build_agent.sh agent.exe
+```
+
+### Compilación para sandbox específica
+```bash
+# Para Any.Run
+./build_agent.sh anyrun.exe ANY_RUN
+
+# Para Filescan.io
+./build_agent.sh filescan.exe FILESCAN
+
+# Para Hybrid Analysis
+./build_agent.sh hybrid.exe HYBRID_ANALYSIS
+
+# Para Triage
+./build_agent.sh triage.exe TRIAGE
+
+# Para VirusTotal
+./build_agent.sh virustotal.exe VIRUSTOTAL
+```
+
+### Compilación manual con Go
+```bash
+# Básica
 GOOS=windows GOARCH=amd64 go build -o agent.exe
+
+# Con target sandbox específico
+GOOS=windows GOARCH=amd64 go build -ldflags "-X main.targetSandbox=ANY_RUN" -o agent.exe
 ```
 
 ### Compilación optimizada (reducir tamaño)

