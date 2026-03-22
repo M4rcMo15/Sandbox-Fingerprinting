@@ -33,14 +33,14 @@ class VMDetector:
         vm_files = raw_data.get('vm_files', [])
         if vm_files:
             indicators.extend(vm_files)
-            score += len(vm_files) * 10  # 10 puntos por archivo
+            score += len(vm_files) * 12  # 12 puntos por archivo (antes 10)
         
         # Analizar claves de registro
         registry_keys = raw_data.get('registry_keys', [])
         for key in registry_keys:
             if key.get('exists', False):
                 indicators.append(f"Registry: {key.get('name', 'Unknown')}")
-                score += 15
+                score += 18  # Antes 15
         
         # Analizar identificador de disco
         disk_info = raw_data.get('disk_info', {})
@@ -49,7 +49,7 @@ class VMDetector:
         for keyword in vm_disk_keywords:
             if keyword in disk_id:
                 indicators.append(f"Disk: {disk_id}")
-                score += 40
+                score += 45  # Antes 40
                 break
         
         # Analizar MAC OUI
@@ -57,14 +57,14 @@ class VMDetector:
         vm_mac_ouis = ['080027', '000C29', '005056', '001C14', '0003FF', '001C42'] # VBox, VMware, VirtualPC, Parallels
         if mac_oui and mac_oui in vm_mac_ouis:
             indicators.append(f"MAC OUI: {mac_oui} (VM Vendor)")
-            score += 40
+            score += 45  # Antes 40
 
         # Analizar CPU
         cpu_info = raw_data.get('cpu_info', {})
         cpu_name = cpu_info.get('processor_name', '').upper()
         if 'VIRTUAL' in cpu_name or 'QEMU' in cpu_name:
             indicators.append(f"CPU: {cpu_name}")
-            score += 40
+            score += 45  # Antes 40
         
         # Analizar CPUID Hypervisor Bit
         if raw_data.get('cpuid_hypervisor_bit', False):
@@ -75,53 +75,60 @@ class VMDetector:
         cpu_temp = cpu_info.get('temperature', 0.0)
         if cpu_temp == 0.0:
             indicators.append("CPU Temperature: 0.0 (VM indicator)")
-            score += 10
+            score += 12  # Antes 10
         
         # Analizar número de ventanas (VMs suelen tener pocas)
         window_count = raw_data.get('window_count', 0)
         if window_count < 10:
             indicators.append(f"Low window count: {window_count}")
-            score += 10
+            score += 12  # Antes 10
 
         # Analizar Timing Discrepancy
         timing = raw_data.get('timing_discrepancy', 0.0)
         if timing > 0.5: # Si la diferencia es mayor a 0.5s
             indicators.append(f"Timing Discrepancy: {timing:.4f}s")
-            score += 30
+            score += 35  # Antes 30
         
         # Analizar hardware limitado (común en sandboxes)
         if system_info:
             ram = system_info.get('total_ram_mb', 0)
             if 0 < ram < 4096:  # Menos de 4GB
                 indicators.append(f"Low RAM: {ram} MB")
-                score += 15
+                score += 18  # Antes 15
             
             cpu_count = system_info.get('cpu_count', 0)
             if 0 < cpu_count < 2:  # 1 Core
                 indicators.append(f"Low CPU count: {cpu_count}")
-                score += 15
+                score += 18  # Antes 15
                 
             uptime = system_info.get('uptime_seconds', 0)
             if 0 < uptime < 600:  # Menos de 10 minutos encendido
                 indicators.append(f"Short uptime: {uptime}s")
-                score += 10
+                score += 12  # Antes 10
+            
+            # Analizar espacio de disco bajo (sandboxes suelen tener poco espacio)
+            disk_bytes = system_info.get('total_disk_bytes', 0)
+            disk_gb = disk_bytes / (1024 ** 3) if disk_bytes > 0 else 0
+            if 0 < disk_gb < 100:  # Menos de 100GB
+                indicators.append(f"Low disk space: {disk_gb:.1f} GB")
+                score += 20
                 
             # Mouse estático
             mouse = system_info.get('mouse_position', {})
             if mouse.get('x') == 0 and mouse.get('y') == 0:
                 indicators.append("Mouse at (0,0)")
-                score += 10
+                score += 12  # Antes 10
             
             # Mouse History Entropy (Simple check)
             mouse_history = raw_data.get('mouse_history', [])
             if not mouse_history and system_info.get('uptime_seconds', 0) > 60:
                 indicators.append("No mouse history recorded")
-                score += 10
+                score += 12  # Antes 10
         
         # Determinar si es VM
         # Capar el score a 100
         score = min(score, 100)
-        is_vm = score >= 50  # Umbral del 50%
+        is_vm = score >= 45  # Umbral del 50%
         
         return is_vm, score, indicators
 

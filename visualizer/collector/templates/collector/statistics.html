@@ -30,23 +30,53 @@
         <div class="summary-card text-center">
             <div class="summary-card-label">Unique Countries</div>
             <div class="summary-card-value text-success" style="font-size: 2.5rem;">
-                {{ geo_stats.countries|length }}
+                {{ unique_countries_count }}
             </div>
         </div>
     </div>
     <div class="col-md-3 mb-3">
         <div class="summary-card text-center">
-            <div class="summary-card-label">EDR Detected</div>
+            <div class="summary-card-label">VM Detection Rate</div>
             <div class="summary-card-value text-warning" style="font-size: 2.5rem;">
+                {{ evasion_success_rate }}%
+            </div>
+            <small class="text-muted">{{ vm_count }} VMs detected</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">Avg Detection Score</div>
+            <div class="summary-card-value text-danger" style="font-size: 2.5rem;">
+                {{ avg_detection_score }}%
+            </div>
+            <small class="text-muted">Confidence level</small>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">EDR Detected</div>
+            <div class="summary-card-value text-info" style="font-size: 2rem;">
                 {{ executions_with_edr }}
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md-4 mb-3">
         <div class="summary-card text-center">
-            <div class="summary-card-label">VM Detected</div>
-            <div class="summary-card-value text-danger" style="font-size: 2.5rem;">
-                {{ vm_count }}
+            <div class="summary-card-label">Avg Uptime</div>
+            <div class="summary-card-value text-secondary" style="font-size: 2rem;">
+                {{ avg_uptime_minutes }} min
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="summary-card text-center">
+            <div class="summary-card-label">Functions Hooked</div>
+            <div class="summary-card-value text-warning" style="font-size: 2rem;">
+                {{ hooked_functions|length }}
             </div>
         </div>
     </div>
@@ -54,19 +84,11 @@
 
 <!-- Charts Row 1 -->
 <div class="row mb-4">
-    <div class="col-md-6 mb-3">
+    <div class="col-md-12 mb-3">
         <div class="card">
             <div class="card-header">Geographic Distribution</div>
             <div class="card-body">
-                <canvas id="countriesChart" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-3">
-        <div class="card">
-            <div class="card-header">Operating Systems</div>
-            <div class="card-body">
-                <canvas id="osChart" height="300"></canvas>
+                <canvas id="countriesChart" height="400"></canvas>
             </div>
         </div>
     </div>
@@ -74,19 +96,11 @@
 
 <!-- Charts Row 2 -->
 <div class="row mb-4">
-    <div class="col-md-6 mb-3">
-        <div class="card">
-            <div class="card-header">VM vs Physical</div>
-            <div class="card-body">
-                <canvas id="vmChart" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-3">
+    <div class="col-md-12 mb-3">
         <div class="card">
             <div class="card-header">EDR/AV Detection</div>
             <div class="card-body">
-                <canvas id="edrDetectionChart" height="300"></canvas>
+                <canvas id="edrDetectionChart" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -100,6 +114,45 @@
             <div class="card-header">EDR/AV Products Detected</div>
             <div class="card-body">
                 <canvas id="edrProductsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Charts Row 4 - VM Indicators & Hooked Functions -->
+<div class="row mb-4">
+    {% if vm_indicators %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">Most Common VM Indicators</div>
+            <div class="card-body">
+                <canvas id="vmIndicatorsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if hooked_functions %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">Most Hooked Functions</div>
+            <div class="card-body">
+                <canvas id="hookedFunctionsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Charts Row 5 - Timing Discrepancy by Sandbox -->
+{% if timing_stats %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Timing Discrepancy by Sandbox</div>
+            <div class="card-body">
+                <canvas id="timingChart" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -240,17 +293,112 @@
         </div>
     </div>
     {% endif %}
+    
+    <!-- VM Indicators -->
+    {% if vm_indicators %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#vmIndicatorsCollapse">
+                VM Indicators
+            </button>
+        </h2>
+        <div id="vmIndicatorsCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="vmIndicatorsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Indicator</th>
+                            <th>Occurrences</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for indicator, count in vm_indicators.items %}
+                        <tr>
+                            <td>{{ indicator }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Hooked Functions -->
+    {% if hooked_functions %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#hookedCollapse">
+                Hooked Functions
+            </button>
+        </h2>
+        <div id="hookedCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="hookedFunctionsTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Times Hooked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for func, count in hooked_functions.items %}
+                        <tr>
+                            <td><code>{{ func }}</code></td>
+                            <td>{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Timing by Sandbox -->
+    {% if timing_stats %}
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#timingCollapse">
+                Timing Discrepancy by Sandbox
+            </button>
+        </h2>
+        <div id="timingCollapse" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion">
+            <div class="accordion-body">
+                <table id="timingTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Sandbox</th>
+                            <th>Avg Timing (s)</th>
+                            <th>Samples</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sandbox, stats in timing_stats.items %}
+                        <tr>
+                            <td><strong>{{ sandbox }}</strong></td>
+                            <td>{{ stats.avg }}</td>
+                            <td>{{ stats.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-TlbjKRKXbKvFNVR+JBHfl0o/BmqD0t8tFqNYFl7W8X8qYqYqYqYqYqYqYqYqYqYq" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
 $(document).ready(function() {
     // Initialize DataTables
-    $('#countriesTable, #citiesTable, #edrProductsTable, #toolsDetectedTable').DataTable({
+    $('#countriesTable, #citiesTable, #edrProductsTable, #toolsDetectedTable, #vmIndicatorsTable, #hookedFunctionsTable, #timingTable').DataTable({
         pageLength: 10,
         order: [[1, 'desc']],
         language: {
@@ -287,30 +435,16 @@ $(document).ready(function() {
     
     // Load data
     const geoStats = {{ geo_stats_json|safe }};
-    const osStats = {{ os_stats_json|safe }};
     const edrProducts = {{ edr_products_json|safe }};
     const allTools = {{ all_tools_json|safe }};
+    const vmIndicators = {{ vm_indicators_json|safe }};
+    const timingStats = {{ timing_stats_json|safe }};
+    const hookedFunctions = {{ hooked_functions_json|safe }};
     
     // Countries Chart
     if (geoStats.countries && Object.keys(geoStats.countries).length > 0) {
         const data = dictToArrays(geoStats.countries);
         new Chart(document.getElementById('countriesChart'), {
-            type: 'pie',
-            data: {
-                labels: data.keys,
-                datasets: [{
-                    data: data.values,
-                    backgroundColor: chartColors
-                }]
-            },
-            options: chartOptions
-        });
-    }
-    
-    // OS Chart
-    if (osStats && Object.keys(osStats).length > 0) {
-        const data = dictToArrays(osStats);
-        new Chart(document.getElementById('osChart'), {
             type: 'bar',
             data: {
                 labels: data.keys,
@@ -322,27 +456,18 @@ $(document).ready(function() {
             },
             options: {
                 ...chartOptions,
+                indexAxis: 'y',
                 scales: {
-                    y: {
-                        beginAtZero: true
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
         });
     }
-    
-    // VM Chart
-    new Chart(document.getElementById('vmChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Virtual Machine', 'Physical'],
-            datasets: [{
-                data: [{{ vm_count }}, {{ physical_count }}],
-                backgroundColor: ['#dc3545', '#198754']
-            }]
-        },
-        options: chartOptions
-    });
     
     // EDR Detection Chart
     new Chart(document.getElementById('edrDetectionChart'), {
@@ -376,6 +501,99 @@ $(document).ready(function() {
                 scales: {
                     x: {
                         beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // VM Indicators Chart
+    if (vmIndicators && Object.keys(vmIndicators).length > 0) {
+        const data = dictToArrays(vmIndicators);
+        new Chart(document.getElementById('vmIndicatorsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Occurrences',
+                    data: data.values,
+                    backgroundColor: '#dc3545'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Hooked Functions Chart
+    if (hookedFunctions && Object.keys(hookedFunctions).length > 0) {
+        const data = dictToArrays(hookedFunctions);
+        new Chart(document.getElementById('hookedFunctionsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.keys,
+                datasets: [{
+                    label: 'Times Hooked',
+                    data: data.values,
+                    backgroundColor: '#ffc107'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Timing Discrepancy Chart
+    if (timingStats && Object.keys(timingStats).length > 0) {
+        const sandboxNames = Object.keys(timingStats);
+        const avgTimings = sandboxNames.map(name => timingStats[name].avg);
+        const counts = sandboxNames.map(name => timingStats[name].count);
+        
+        new Chart(document.getElementById('timingChart'), {
+            type: 'bar',
+            data: {
+                labels: sandboxNames,
+                datasets: [{
+                    label: 'Avg Timing Discrepancy (seconds)',
+                    data: avgTimings,
+                    backgroundColor: '#6f42c1',
+                    yAxisID: 'y'
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Seconds'
+                        }
+                    }
+                },
+                plugins: {
+                    ...chartOptions.plugins,
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const idx = context.dataIndex;
+                                return `Samples: ${counts[idx]}`;
+                            }
+                        }
                     }
                 }
             }

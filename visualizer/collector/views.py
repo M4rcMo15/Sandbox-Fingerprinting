@@ -48,32 +48,32 @@ def statistics(request):
         if execution.public_ip:
             ips[execution.public_ip] += 1
     
-    geo_stats['countries'] = dict(countries.most_common(10))
+    geo_stats['countries'] = dict(countries.most_common(20))
     geo_stats['cities'] = dict(cities.most_common(10))
     geo_stats['top_ips'] = dict(ips.most_common(10))
     
-    # Estadísticas de sistemas operativos
-    os_stats = Counter()
-    arch_stats = Counter()
+    # Guardar el total real de países únicos para el KPI
+    unique_countries_count = len(countries)
     
-    for execution in executions:
-        if hasattr(execution, 'system_info'):
-            sysinfo = execution.system_info
-            if sysinfo.os:
-                os_stats[sysinfo.os] += 1
-            if sysinfo.architecture:
-                arch_stats[sysinfo.architecture] += 1
-    
-    # Estadísticas de sandbox/VM
+    # Estadísticas de sandbox/VM (solo para conteo en KPIs)
     vm_count = 0
     physical_count = 0
+    total_score = 0
+    score_count = 0
     
     for execution in executions:
         if hasattr(execution, 'sandbox_info'):
-            if execution.sandbox_info.is_vm:
+            sandbox = execution.sandbox_info
+            if sandbox.is_vm:
                 vm_count += 1
             else:
                 physical_count += 1
+            total_score += sandbox.score
+            score_count += 1
+    
+    # Calcular Sandbox Evasion Success Rate
+    evasion_success_rate = round((vm_count / total_executions * 100), 1) if total_executions > 0 else 0
+    avg_detection_score = round(total_score / score_count, 1) if score_count > 0 else 0
     
     # Estadísticas de EDR/AV
     edr_products = Counter()
@@ -99,6 +99,64 @@ def statistics(request):
             for tool in tools.reversing_tools + tools.debugging_tools + tools.monitoring_tools + tools.analysis_tools:
                 all_tools[tool] += 1
     
+    # Estadísticas de VM Indicators (Most Common)
+    vm_indicators_counter = Counter()
+    for execution in executions:
+        if hasattr(execution, 'sandbox_info'):
+            for indicator in execution.sandbox_info.vm_indicators:
+                # Limpiar el indicador para agrupar mejor
+                clean_indicator = indicator
+                if indicator.startswith('Registry:'):
+                    clean_indicator = 'Registry Key (VM)'
+                elif indicator.startswith('C:\\') or indicator.startswith('\\'):
+                    clean_indicator = 'VM Driver/File'
+                elif 'Disk:' in indicator:
+                    clean_indicator = indicator.split(':')[0] + ': VM Disk'
+                elif 'MAC OUI:' in indicator:
+                    clean_indicator = 'MAC OUI (VM Vendor)'
+                elif 'CPU:' in indicator:
+                    clean_indicator = 'Virtual CPU Name'
+                vm_indicators_counter[clean_indicator] += 1
+    
+    # Estadísticas de Uptime
+    uptime_values = []
+    for execution in executions:
+        if hasattr(execution, 'system_info'):
+            uptime = execution.system_info.uptime_seconds
+            if uptime > 0:
+                uptime_values.append(uptime)
+    
+    avg_uptime_seconds = sum(uptime_values) / len(uptime_values) if uptime_values else 0
+    avg_uptime_minutes = round(avg_uptime_seconds / 60, 1)
+    
+    # Estadísticas de Timing Discrepancy por Sandbox
+    timing_by_sandbox = {}
+    for execution in executions:
+        if execution.target_sandbox and hasattr(execution, 'sandbox_info'):
+            sandbox_name = execution.target_sandbox
+            timing = execution.sandbox_info.timing_discrepancy or 0.0
+            if timing > 0:
+                if sandbox_name not in timing_by_sandbox:
+                    timing_by_sandbox[sandbox_name] = []
+                timing_by_sandbox[sandbox_name].append(timing)
+    
+    # Calcular promedios
+    timing_stats = {}
+    for sandbox, timings in timing_by_sandbox.items():
+        timing_stats[sandbox] = {
+            'avg': round(sum(timings) / len(timings), 3),
+            'count': len(timings)
+        }
+    
+    # Estadísticas de Funciones Hookeadas
+    hooked_functions_counter = Counter()
+    for execution in executions:
+        if hasattr(execution, 'hook_info'):
+            for hooked_func in execution.hook_info.hooked_functions.all():
+                if hooked_func.is_hooked:
+                    func_name = f"{hooked_func.module}!{hooked_func.function}"
+                    hooked_functions_counter[func_name] += 1
+    
     # Estadísticas de idioma y zona horaria
     languages = Counter()
     timezones = Counter()
@@ -114,26 +172,28 @@ def statistics(request):
     # Convertir a formato JSON para JavaScript
     context = {
         'total_executions': total_executions,
+        'unique_countries_count': unique_countries_count,
         'geo_stats': geo_stats,
-        'os_stats': dict(os_stats.most_common()),
-        'arch_stats': dict(arch_stats.most_common()),
         'vm_count': vm_count,
         'physical_count': physical_count,
+        'evasion_success_rate': evasion_success_rate,
+        'avg_detection_score': avg_detection_score,
         'edr_products': dict(edr_products.most_common(10)),
         'edr_types': dict(edr_types.most_common()),
         'executions_with_edr': executions_with_edr,
         'executions_without_edr': total_executions - executions_with_edr,
         'all_tools': dict(all_tools.most_common(15)),
-        'languages': dict(languages.most_common(10)),
-        'timezones': dict(timezones.most_common(10)),
+        'vm_indicators': dict(vm_indicators_counter.most_common(10)),
+        'avg_uptime_minutes': avg_uptime_minutes,
+        'timing_stats': timing_stats,
+        'hooked_functions': dict(hooked_functions_counter.most_common(15)),
         # Versiones JSON para JavaScript
         'geo_stats_json': json.dumps(geo_stats, cls=DjangoJSONEncoder),
-        'os_stats_json': json.dumps(dict(os_stats.most_common()), cls=DjangoJSONEncoder),
-        'arch_stats_json': json.dumps(dict(arch_stats.most_common()), cls=DjangoJSONEncoder),
         'edr_products_json': json.dumps(dict(edr_products.most_common(10)), cls=DjangoJSONEncoder),
         'all_tools_json': json.dumps(dict(all_tools.most_common(15)), cls=DjangoJSONEncoder),
-        'languages_json': json.dumps(dict(languages.most_common(10)), cls=DjangoJSONEncoder),
-        'timezones_json': json.dumps(dict(timezones.most_common(10)), cls=DjangoJSONEncoder),
+        'vm_indicators_json': json.dumps(dict(vm_indicators_counter.most_common(10)), cls=DjangoJSONEncoder),
+        'timing_stats_json': json.dumps(timing_stats, cls=DjangoJSONEncoder),
+        'hooked_functions_json': json.dumps(dict(hooked_functions_counter.most_common(15)), cls=DjangoJSONEncoder),
     }
     
     return render(request, 'collector/statistics.html', context)

